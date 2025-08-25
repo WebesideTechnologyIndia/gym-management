@@ -1,0 +1,392 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Stock Transaction - {{ item.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-exchange-alt me-2"></i>Stock Transaction</h2>
+        <p class="text-muted mb-0">Record stock movement for {{ item.name }}</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:inventory_detail' gym_id item.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Item
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus me-2"></i>New Transaction
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <!-- Transaction Type -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Transaction Type <span class="text-danger">*</span></label>
+                            <select name="transaction_type" class="form-select" id="transactionType" required>
+                                <option value="">Select Transaction Type</option>
+                                <option value="purchase">Purchase (Stock In)</option>
+                                <option value="sale">Sale (Stock Out)</option>
+                                <option value="adjustment">Stock Adjustment</option>
+                                <option value="damage">Damage/Loss</option>
+                                <option value="return">Return</option>
+                                <option value="transfer">Transfer</option>
+                                <option value="expired">Expired Items</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Reference Number</label>
+                            <input type="text" name="reference_number" class="form-control" 
+                                   placeholder="Invoice/Receipt number">
+                        </div>
+                    </div>
+                    
+                    <!-- Quantity and Price -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" name="quantity" class="form-control" 
+                                       step="0.01" min="0.01" required id="quantityInput">
+                                <span class="input-group-text">{{ item.unit }}</span>
+                            </div>
+                            <small class="text-muted">Current stock: {{ item.current_stock }} {{ item.unit }}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Unit Price <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" name="unit_price" class="form-control" 
+                                       step="0.01" min="0" required id="unitPriceInput" value="{{ item.cost_price }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="totalAmount" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vendor (for purchases) -->
+                    <div class="row mb-3" id="vendorSection" style="display: none;">
+                        <div class="col-md-6">
+                            <label class="form-label">Vendor</label>
+                            <select name="vendor" class="form-select">
+                                <option value="">Select Vendor</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Batch and Expiry (for items with expiry) -->
+                    {% if item.has_expiry %}
+                    <div class="row mb-3" id="expirySection">
+                        <div class="col-md-6">
+                            <label class="form-label">Batch Number</label>
+                            <input type="text" name="batch_number" class="form-control" 
+                                   placeholder="Enter batch number">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" name="expiry_date" class="form-control">
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3" 
+                                  placeholder="Add any additional notes about this transaction"></textarea>
+                    </div>
+                    
+                    <!-- Stock Impact Preview -->
+                    <div class="alert alert-info" id="stockImpact">
+                        <h6><i class="fas fa-info-circle me-2"></i>Stock Impact</h6>
+                        <div id="impactText">Select transaction type and quantity to see impact</div>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'inventory:inventory_detail' gym_id item.id %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Record Transaction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Item Information Panel -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-box me-2"></i>Item Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <h5>{{ item.name }}</h5>
+                <p class="text-muted mb-3">{{ item.brand|default:"No brand" }}</p>
+                
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0">{{ item.current_stock }}</h4>
+                            <small class="text-muted">Current Stock</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0">₹{{ item.cost_price }}</h4>
+                        <small class="text-muted">Cost Price</small>
+                    </div>
+                </div>
+                
+                <!-- Stock Level Indicator -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Stock Level</small>
+                        <small class="fw-bold">{{ item.current_stock }} / {{ item.maximum_stock }} {{ item.unit }}</small>
+                    </div>
+                    {% with stock_pct=item.stock_percentage|default:50 %}
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {% if item.current_stock == 0 %}bg-danger{% elif item.current_stock <= item.minimum_stock %}bg-warning{% elif stock_pct < 50 %}bg-info{% else %}bg-success{% endif %}" 
+                             style="width: {{ stock_pct }}%"></div>
+                    </div>
+                    {% endwith %}
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">Min: {{ item.minimum_stock }}</small>
+                        <small class="text-muted">Max: {{ item.maximum_stock }}</small>
+                    </div>
+                </div>
+                
+                <!-- Status Badges -->
+                <div class="mb-3">
+                    {% if item.current_stock == 0 %}
+                    <span class="badge bg-danger">Out of Stock</span>
+                    {% elif item.current_stock <= item.minimum_stock %}
+                    <span class="badge bg-warning">Low Stock</span>
+                    {% else %}
+                    <span class="badge bg-success">In Stock</span>
+                    {% endif %}
+                    
+                    {% if item.auto_reorder %}
+                    <span class="badge bg-info">Auto Reorder</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Additional Info -->
+                <hr>
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Category:</span>
+                        <span>{{ item.category.name }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Unit:</span>
+                        <span>{{ item.get_unit_display }}</span>
+                    </div>
+                    {% if item.location %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Location:</span>
+                        <span>{{ item.location }}</span>
+                    </div>
+                    {% endif %}
+                    {% if item.sku %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>SKU:</span>
+                        <span>{{ item.sku }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Transactions
+                </h6>
+            </div>
+            <div class="card-body">
+                <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="setQuickTransaction('purchase', 10)">
+                    <i class="fas fa-plus me-1"></i>Quick Purchase (10)
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="setQuickTransaction('adjustment', 1)">
+                    <i class="fas fa-edit me-1"></i>Stock Adjustment
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="setQuickTransaction('damage', 1)">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Report Damage
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const transactionType = document.getElementById('transactionType');
+    const quantityInput = document.getElementById('quantityInput');
+    const unitPriceInput = document.getElementById('unitPriceInput');
+    const totalAmount = document.getElementById('totalAmount');
+    const vendorSection = document.getElementById('vendorSection');
+    const stockImpact = document.getElementById('impactText');
+    
+    const currentStock = {{ item.current_stock }};
+    
+    // Show/hide vendor section based on transaction type
+    transactionType.addEventListener('change', function() {
+        if (this.value === 'purchase') {
+            vendorSection.style.display = 'block';
+        } else {
+            vendorSection.style.display = 'none';
+        }
+        updateStockImpact();
+    });
+    
+    // Update total amount
+    function updateTotalAmount() {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const unitPrice = parseFloat(unitPriceInput.value) || 0;
+        const total = quantity * unitPrice;
+        totalAmount.value = total.toFixed(2);
+    }
+    
+    // Update stock impact preview
+    function updateStockImpact() {
+        const type = transactionType.value;
+        const quantity = parseFloat(quantityInput.value) || 0;
+        
+        if (!type || !quantity) {
+            stockImpact.textContent = 'Select transaction type and quantity to see impact';
+            return;
+        }
+        
+        let newStock = currentStock;
+        let action = '';
+        let alertClass = 'alert-info';
+        
+        if (['purchase', 'adjustment', 'return'].includes(type)) {
+            newStock += quantity;
+            action = 'increase';
+        } else {
+            newStock -= quantity;
+            action = 'decrease';
+            if (newStock < 0) {
+                alertClass = 'alert-danger';
+                stockImpact.parentElement.className = 'alert ' + alertClass;
+                stockImpact.innerHTML = `<strong>Warning:</strong> This transaction would result in negative stock (${newStock.toFixed(2)})`;
+                return;
+            }
+        }
+        
+        if (newStock <= {{ item.minimum_stock }}) {
+            alertClass = 'alert-warning';
+        } else {
+            alertClass = 'alert-success';
+        }
+        
+        stockImpact.parentElement.className = 'alert ' + alertClass;
+        stockImpact.innerHTML = `Stock will ${action} from <strong>${currentStock}</strong> to <strong>${newStock.toFixed(2)} {{ item.unit }}</strong>`;
+    }
+    
+    quantityInput.addEventListener('input', function() {
+        updateTotalAmount();
+        updateStockImpact();
+    });
+    
+    unitPriceInput.addEventListener('input', updateTotalAmount);
+    
+    // Quick transaction functions
+    window.setQuickTransaction = function(type, quantity) {
+        transactionType.value = type;
+        quantityInput.value = quantity;
+        
+        // Trigger change events
+        transactionType.dispatchEvent(new Event('change'));
+        quantityInput.dispatchEvent(new Event('input'));
+    };
+    
+    // Validate form before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const type = transactionType.value;
+        const quantity = parseFloat(quantityInput.value) || 0;
+        
+        // Check for negative stock on outgoing transactions
+        if (['sale', 'damage', 'transfer', 'expired'].includes(type)) {
+            if (quantity > currentStock) {
+                e.preventDefault();
+                alert(`Cannot ${type} ${quantity} {{ item.unit }}. Only ${currentStock} {{ item.unit }} available in stock.`);
+                return false;
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+    font-size: 0.9rem;
+}
+
+.alert h6 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.input-group-text {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+    font-weight: 500;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,463 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Update Maintenance - {{ maintenance.equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-edit me-2"></i>Update Maintenance Record</h2>
+        <p class="text-muted mb-0">{{ maintenance.equipment.name }} - {{ maintenance.maintenance_type|title }}</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:equipment_detail' gym_id maintenance.equipment.id %}" class="btn btn-info me-2">
+            <i class="fas fa-dumbbell me-2"></i>View Equipment
+        </a>
+        <a href="{% url 'inventory:maintenance_list' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Maintenance
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>Maintenance Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="maintenanceForm">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information (Read-only) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Basic Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Equipment</label>
+                            <input type="text" class="form-control" value="{{ maintenance.equipment.name }} - {{ maintenance.equipment.serial_number }}" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Maintenance Type</label>
+                            <input type="text" class="form-control" value="{{ maintenance.maintenance_type|title }}" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Scheduled Date</label>
+                            <input type="text" class="form-control" value="{{ maintenance.scheduled_date|date:'M d, Y' }}" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Status</label>
+                            <span class="badge bg-{% if maintenance.status == 'completed' %}success{% elif maintenance.status == 'in_progress' %}warning{% elif maintenance.status == 'cancelled' %}danger{% else %}secondary{% endif %} fs-6">
+                                {{ maintenance.status|title }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Status Update -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Status Update</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Update Status *</label>
+                            <select name="status" class="form-select" required id="statusSelect">
+                                <option value="scheduled" {% if maintenance.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                                <option value="in_progress" {% if maintenance.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if maintenance.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if maintenance.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Actual Date</label>
+                            <input type="date" name="actual_date" class="form-control" value="{{ maintenance.actual_date|date:'Y-m-d' }}" id="actualDate">
+                            <div class="form-text">Date when work was actually performed</div>
+                        </div>
+                    </div>
+
+                    <!-- Work Details -->
+                    <div class="row mb-4" id="workDetailsSection">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Work Details</h6>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Work Performed</label>
+                            <textarea name="work_performed" class="form-control" rows="4" placeholder="Describe the actual work that was performed...">{{ maintenance.work_performed }}</textarea>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Parts Replaced</label>
+                            <textarea name="parts_replaced" class="form-control" rows="3" placeholder="List any parts that were replaced or used...">{{ maintenance.parts_replaced }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Cost Information -->
+                    <div class="row mb-4" id="costSection">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Cost Information</h6>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Labor Cost (₹)</label>
+                            <input type="number" name="labor_cost" class="form-control" step="0.01" min="0" value="{{ maintenance.labor_cost }}" id="laborCost" placeholder="0.00">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Parts Cost (₹)</label>
+                            <input type="number" name="parts_cost" class="form-control" step="0.01" min="0" value="{{ maintenance.parts_cost }}" id="partsCost" placeholder="0.00">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Total Cost (₹)</label>
+                            <input type="number" class="form-control" id="totalCost" value="{{ maintenance.total_cost }}" readonly>
+                            <div class="form-text">Auto-calculated</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Downtime (Hours)</label>
+                            <input type="number" name="downtime_hours" class="form-control" step="0.5" min="0" value="{{ maintenance.downtime_hours }}" placeholder="0.0">
+                            <div class="form-text">How long was equipment out of service?</div>
+                        </div>
+                    </div>
+
+                    <!-- Personnel Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Personnel Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Technician Name</label>
+                            <input type="text" name="technician_name" class="form-control" value="{{ maintenance.technician_name }}" placeholder="Name of technician who performed work">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vendor/Service Provider</label>
+                            <select name="vendor" class="form-select">
+                                <option value="">Select Vendor (Optional)</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}" {% if vendor == maintenance.vendor %}selected{% endif %}>
+                                    {{ vendor.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Next Maintenance -->
+                    <div class="row mb-4" id="nextMaintenanceSection">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Next Maintenance</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Next Maintenance Due</label>
+                            <input type="date" name="next_maintenance_due" class="form-control" value="{{ maintenance.next_maintenance_due|date:'Y-m-d' }}" id="nextMaintenanceDate">
+                            <div class="form-text">When should the next maintenance be scheduled?</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Auto-calculate Next Date</label>
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-outline-info" onclick="calculateNextMaintenance()">
+                                    <i class="fas fa-calculator me-2"></i>Calculate from Frequency
+                                </button>
+                            </div>
+                            <div class="form-text">Based on equipment's maintenance frequency</div>
+                        </div>
+                    </div>
+
+                    <!-- Images -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Images (Optional)</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Before Images</label>
+                            <input type="file" name="before_images" class="form-control" accept="image/*">
+                            {% if maintenance.before_images %}
+                            <div class="mt-2">
+                                <img src="{{ maintenance.before_images.url }}" class="img-thumbnail" style="max-width: 150px;">
+                                <div class="form-text">Current before image</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">After Images</label>
+                            <input type="file" name="after_images" class="form-control" accept="image/*">
+                            {% if maintenance.after_images %}
+                            <div class="mt-2">
+                                <img src="{{ maintenance.after_images.url }}" class="img-thumbnail" style="max-width: 150px;">
+                                <div class="form-text">Current after image</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Additional Information</h6>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Any additional notes or observations...">{{ maintenance.notes }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'inventory:maintenance_list' gym_id %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="button" class="btn btn-success me-md-2" onclick="markCompleted()" id="completeBtn" {% if maintenance.status == 'completed' %}style="display: none;"{% endif %}>
+                            <i class="fas fa-check me-2"></i>Mark Completed
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Maintenance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Equipment Information -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-dumbbell me-2"></i>Equipment Info
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Name:</strong> {{ maintenance.equipment.name }}
+                </div>
+                <div class="mb-2">
+                    <strong>Brand:</strong> {{ maintenance.equipment.brand }}
+                </div>
+                <div class="mb-2">
+                    <strong>Serial:</strong> {{ maintenance.equipment.serial_number }}
+                </div>
+                <div class="mb-2">
+                    <strong>Status:</strong>
+                    <span class="badge bg-{% if maintenance.equipment.status == 'working' %}success{% else %}warning{% endif %}">
+                        {{ maintenance.equipment.status|title }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Condition:</strong>
+                    <span class="badge bg-{% if maintenance.equipment.condition == 'excellent' %}success{% elif maintenance.equipment.condition == 'good' %}primary{% else %}warning{% endif %}">
+                        {{ maintenance.equipment.condition|title }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Location:</strong> {{ maintenance.equipment.location|default:"Not specified" }}
+                </div>
+                <div class="mb-2">
+                    <strong>Maintenance Frequency:</strong> {{ maintenance.equipment.maintenance_frequency_days }} days
+                </div>
+            </div>
+        </div>
+        
+        <!-- Maintenance History -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Maintenance
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recent_maintenance %}
+                {% for recent in recent_maintenance %}
+                <div class="d-flex justify-content-between align-items-center {% if not forloop.last %}border-bottom{% endif %} py-2">
+                    <div>
+                        <div class="fw-bold">{{ recent.maintenance_type|title }}</div>
+                        <small class="text-muted">{{ recent.scheduled_date|date:"M d, Y" }}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-{% if recent.status == 'completed' %}success{% elif recent.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                            {{ recent.status|title }}
+                        </span>
+                        {% if recent.total_cost > 0 %}
+                        <div><small class="text-muted">₹{{ recent.total_cost|floatformat:0 }}</small></div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted mb-0">No recent maintenance records</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Status Guide -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Status Guide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="badge bg-secondary me-2">Scheduled</span>
+                    <small class="text-muted">Work is planned</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-warning me-2">In Progress</span>
+                    <small class="text-muted">Work is ongoing</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-success me-2">Completed</span>
+                    <small class="text-muted">Work is finished</small>
+                </div>
+                <div class="mb-2">
+                    <span class="badge bg-danger me-2">Cancelled</span>
+                    <small class="text-muted">Work was cancelled</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:equipment_detail' gym_id maintenance.equipment.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-dumbbell me-2"></i>View Equipment
+                    </a>
+                    <a href="{% url 'inventory:schedule_equipment_maintenance' gym_id maintenance.equipment.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-calendar-plus me-2"></i>Schedule Next
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('statusSelect');
+    const actualDate = document.getElementById('actualDate');
+    const laborCost = document.getElementById('laborCost');
+    const partsCost = document.getElementById('partsCost');
+    const totalCost = document.getElementById('totalCost');
+    const workDetailsSection = document.getElementById('workDetailsSection');
+    const costSection = document.getElementById('costSection');
+    const nextMaintenanceSection = document.getElementById('nextMaintenanceSection');
+    const completeBtn = document.getElementById('completeBtn');
+    
+    const maintenanceFrequency = {{ maintenance.equipment.maintenance_frequency_days }};
+    
+    // Calculate total cost
+    function calculateTotalCost() {
+        const labor = parseFloat(laborCost.value) || 0;
+        const parts = parseFloat(partsCost.value) || 0;
+        const total = labor + parts;
+        totalCost.value = total.toFixed(2);
+    }
+    
+    // Handle status change
+    statusSelect.addEventListener('change', function() {
+        const status = this.value;
+        
+        // Show/hide sections based on status
+        if (['in_progress', 'completed'].includes(status)) {
+            workDetailsSection.style.display = 'block';
+            costSection.style.display = 'block';
+        } else {
+            workDetailsSection.style.display = 'none';
+            costSection.style.display = 'none';
+        }
+        
+        if (status === 'completed') {
+            nextMaintenanceSection.style.display = 'block';
+            completeBtn.style.display = 'none';
+            
+            // Set actual date to today if empty
+            if (!actualDate.value) {
+                actualDate.value = new Date().toISOString().split('T')[0];
+            }
+        } else {
+            nextMaintenanceSection.style.display = 'none';
+            completeBtn.style.display = status === 'completed' ? 'none' : 'inline-block';
+        }
+    });
+    
+    // Trigger status change on load
+    statusSelect.dispatchEvent(new Event('change'));
+    
+    // Calculate total cost on input
+    laborCost.addEventListener('input', calculateTotalCost);
+    partsCost.addEventListener('input', calculateTotalCost);
+    
+    // Calculate total cost on load
+    calculateTotalCost();
+});
+
+// Calculate next maintenance date
+function calculateNextMaintenance() {
+    const actualDate = document.getElementById('actualDate');
+    const nextMaintenanceDate = document.getElementById('nextMaintenanceDate');
+    const frequency = {{ maintenance.equipment.maintenance_frequency_days }};
+    
+    if (actualDate.value) {
+        const actual = new Date(actualDate.value);
+        const next = new Date(actual);
+        next.setDate(next.getDate() + frequency);
+        
+        nextMaintenanceDate.value = next.toISOString().split('T')[0];
+    } else {
+        alert('Please set the actual date first.');
+    }
+}
+
+// Mark as completed
+function markCompleted() {
+    const statusSelect = document.getElementById('statusSelect');
+    const actualDate = document.getElementById('actualDate');
+    
+    statusSelect.value = 'completed';
+    statusSelect.dispatchEvent(new Event('change'));
+    
+    if (!actualDate.value) {
+        actualDate.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Auto-calculate next maintenance
+    calculateNextMaintenance();
+}
+
+// Form validation
+document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
+    const status = document.getElementById('statusSelect').value;
+    const actualDate = document.getElementById('actualDate');
+    
+    if (status === 'completed' && !actualDate.value) {
+        e.preventDefault();
+        alert('Please set the actual completion date for completed maintenance.');
+        actualDate.focus();
+        return false;
+    }
+});
+</script>
+
+<style>
+.img-thumbnail {
+    max-width: 150px;
+    height: auto;
+}
+
+.badge.fs-6 {
+    font-size: 1rem !important;
+    padding: 0.5rem 1rem;
+}
+
+@media print {
+    .btn, .card-header .btn-group {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,641 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Inventory Reports - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-chart-bar me-2"></i>Inventory Reports & Analytics</h2>
+        <p class="text-muted mb-0">Analyze stock performance and inventory insights</p>
+    </div>
+    <div>
+        <button class="btn btn-success me-2" onclick="exportReport('excel')">
+            <i class="fas fa-file-excel me-2"></i>Export Excel
+        </button>
+        <button class="btn btn-info me-2" onclick="exportReport('pdf')">
+            <i class="fas fa-file-pdf me-2"></i>Export PDF
+        </button>
+        <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-boxes fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ inventory_by_category|length }}</h3>
+                <small>Total Items</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-rupee-sign fa-2x mb-2"></i>
+                <h3 class="mb-1">₹{{ total_inventory_value|floatformat:0 }}</h3>
+                <small>Total Inventory Value</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ low_stock_items|length }}</h3>
+                <small>Low Stock Items</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-exchange-alt fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ total_transactions }}</h3>
+                <small>Total Transactions</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Inventory Value by Category -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Inventory Value by Category
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryValueChart" width="400" height="300"></canvas>
+                
+                <!-- Category Value Table -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Items</th>
+                                <th>Total Value</th>
+                                <th>Avg Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in inventory_by_category %}
+                            <tr>
+                                <td>{{ category.category__name }}</td>
+                                <td>{{ category.item_count }}</td>
+                                <td>₹{{ category.total_value|floatformat:0 }}</td>
+                                <td>₹{{ category.avg_value|floatformat:0 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stock Level Distribution -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-doughnut me-2"></i>Stock Level Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="stockLevelChart" width="400" height="300"></canvas>
+                
+                <!-- Stock Level Table -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Stock Level</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-danger">Out of Stock</span></td>
+                                <td>{{ stock_distribution.out_of_stock }}</td>
+                                <td>{{ stock_distribution.out_of_stock_pct|floatformat:1 }}%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning">Low Stock</span></td>
+                                <td>{{ stock_distribution.low_stock }}</td>
+                                <td>{{ stock_distribution.low_stock_pct|floatformat:1 }}%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-info">Normal Stock</span></td>
+                                <td>{{ stock_distribution.normal_stock }}</td>
+                                <td>{{ stock_distribution.normal_stock_pct|floatformat:1 }}%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">Overstock</span></td>
+                                <td>{{ stock_distribution.overstock }}</td>
+                                <td>{{ stock_distribution.overstock_pct|floatformat:1 }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Trends -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Transaction Trends (Last 12 Months)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="transactionTrendChart" width="400" height="150"></canvas>
+                
+                <!-- Monthly Transaction Summary -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Purchases</th>
+                                <th>Sales</th>
+                                <th>Purchase Value</th>
+                                <th>Sales Value</th>
+                                <th>Net Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month_data in transaction_summary %}
+                            <tr>
+                                <td>{{ month_data.month }}</td>
+                                <td>{{ month_data.purchases }}</td>
+                                <td>{{ month_data.sales }}</td>
+                                <td>₹{{ month_data.purchase_value|floatformat:0 }}</td>
+                                <td>₹{{ month_data.sales_value|floatformat:0 }}</td>
+                                <td class="{% if month_data.net_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    ₹{{ month_data.net_value|floatformat:0 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fast Moving & Slow Moving Items -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-rocket me-2 text-success"></i>Fast Moving Items
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Transactions</th>
+                                <th>Total Qty</th>
+                                <th>Current Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in fast_moving_items %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ item.name }}</strong><br>
+                                        <small class="text-muted">{{ item.brand|default:"No Brand" }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ item.category.name }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ item.transaction_count }}</span>
+                                </td>
+                                <td>{{ item.total_quantity }} {{ item.unit }}</td>
+                                <td>
+                                    <span class="{% if item.is_low_stock %}text-warning{% else %}text-success{% endif %}">
+                                        {{ item.current_stock }} {{ item.unit }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-turtle me-2 text-warning"></i>Slow Moving Items
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Current Stock</th>
+                                <th>Value</th>
+                                <th>Last Transaction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in slow_moving_items %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ item.name }}</strong><br>
+                                        <small class="text-muted">{{ item.brand|default:"No Brand" }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ item.category.name }}</td>
+                                <td>{{ item.current_stock }} {{ item.unit }}</td>
+                                <td>₹{{ item.total_value|floatformat:0 }}</td>
+                                <td>
+                                    {% if item.last_transaction %}
+                                    {{ item.last_transaction|date:"M d, Y" }}
+                                    {% else %}
+                                    <span class="text-muted">No transactions</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Items Alert -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Low Stock Items Requiring Attention
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Current Stock</th>
+                                <th>Minimum Stock</th>
+                                <th>Suggested Reorder</th>
+                                <th>Primary Vendor</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ item.name }}</strong><br>
+                                        <small class="text-muted">{{ item.brand|default:"No Brand" }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ item.category.name }}</td>
+                                <td>
+                                    <span class="text-danger fw-bold">{{ item.current_stock }} {{ item.unit }}</span>
+                                </td>
+                                <td>{{ item.minimum_stock }} {{ item.unit }}</td>
+                                <td>
+                                    {% if item.auto_reorder %}
+                                    <span class="text-success">{{ item.reorder_quantity }} {{ item.unit }}</span>
+                                    {% else %}
+                                    <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.primary_vendor %}
+                                    {{ item.primary_vendor.name }}
+                                    {% else %}
+                                    <span class="text-muted">No vendor</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Restock
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <h6 class="text-success">All items are adequately stocked!</h6>
+                    <p class="text-muted mb-0">No items require immediate restocking.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ABC Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-sort-amount-down me-2"></i>ABC Analysis (Value-based Classification)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <canvas id="abcAnalysisChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Classification</th>
+                                        <th>Items</th>
+                                        <th>Value Contribution</th>
+                                        <th>Recommendation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="badge bg-danger">Category A</span></td>
+                                        <td>{{ abc_analysis.category_a_count }} ({{ abc_analysis.category_a_pct|floatformat:1 }}%)</td>
+                                        <td>{{ abc_analysis.category_a_value_pct|floatformat:1 }}%</td>
+                                        <td><small class="text-muted">Tight control, frequent monitoring</small></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-warning">Category B</span></td>
+                                        <td>{{ abc_analysis.category_b_count }} ({{ abc_analysis.category_b_pct|floatformat:1 }}%)</td>
+                                        <td>{{ abc_analysis.category_b_value_pct|floatformat:1 }}%</td>
+                                        <td><small class="text-muted">Moderate control, periodic review</small></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-success">Category C</span></td>
+                                        <td>{{ abc_analysis.category_c_count }} ({{ abc_analysis.category_c_pct|floatformat:1 }}%)</td>
+                                        <td>{{ abc_analysis.category_c_value_pct|floatformat:1 }}%</td>
+                                        <td><small class="text-muted">Simple controls, bulk ordering</small></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Insights & Recommendations -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Key Insights & Recommendations
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-line text-success me-2"></i>Performance Highlights</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-circle text-success me-2" style="font-size: 8px;"></i>Total inventory value: ₹{{ total_inventory_value|floatformat:0 }}</li>
+                            <li><i class="fas fa-circle text-primary me-2" style="font-size: 8px;"></i>{{ well_stocked_percentage|floatformat:1 }}% items are adequately stocked</li>
+                            <li><i class="fas fa-circle text-info me-2" style="font-size: 8px;"></i>{{ fast_moving_items|length }} items are fast-moving</li>
+                            <li><i class="fas fa-circle text-warning me-2" style="font-size: 8px;"></i>Average stock turnover: {{ avg_turnover|floatformat:1 }} times/year</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i>Areas for Improvement</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-circle text-danger me-2" style="font-size: 8px;"></i>{{ low_stock_items|length }} items need immediate restocking</li>
+                            <li><i class="fas fa-circle text-warning me-2" style="font-size: 8px;"></i>{{ slow_moving_items|length }} items are slow-moving (consider promotion)</li>
+                            <li><i class="fas fa-circle text-info me-2" style="font-size: 8px;"></i>{{ overstock_value|floatformat:0 }}% of value tied up in overstock</li>
+                            <li><i class="fas fa-circle text-secondary me-2" style="font-size: 8px;"></i>{{ items_without_vendors }} items lack primary vendors</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<script>
+// Chart Colors
+const chartColors = {
+    primary: '#007bff',
+    success: '#28a745',
+    warning: '#ffc107',
+    danger: '#dc3545',
+    info: '#17a2b8',
+    secondary: '#6c757d'
+};
+
+// Category Value Chart
+const categoryValueCtx = document.getElementById('categoryValueChart').getContext('2d');
+new Chart(categoryValueCtx, {
+    type: 'pie',
+    data: {
+        labels: [{% for category in inventory_by_category %}'{{ category.category__name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for category in inventory_by_category %}{{ category.total_value }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                chartColors.primary,
+                chartColors.success,
+                chartColors.warning,
+                chartColors.danger,
+                chartColors.info,
+                chartColors.secondary
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ₹' + context.parsed.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Stock Level Distribution Chart
+const stockLevelCtx = document.getElementById('stockLevelChart').getContext('2d');
+new Chart(stockLevelCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Out of Stock', 'Low Stock', 'Normal Stock', 'Overstock'],
+        datasets: [{
+            data: [
+                {{ stock_distribution.out_of_stock }},
+                {{ stock_distribution.low_stock }},
+                {{ stock_distribution.normal_stock }},
+                {{ stock_distribution.overstock }}
+            ],
+            backgroundColor: [
+                chartColors.danger,
+                chartColors.warning,
+                chartColors.info,
+                chartColors.success
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Transaction Trend Chart
+const transactionTrendCtx = document.getElementById('transactionTrendChart').getContext('2d');
+new Chart(transactionTrendCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for month_data in transaction_summary %}'{{ month_data.month }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Purchase Value (₹)',
+            data: [{% for month_data in transaction_summary %}{{ month_data.purchase_value }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: chartColors.success,
+            backgroundColor: chartColors.success + '20',
+            tension: 0.1,
+            fill: false
+        }, {
+            label: 'Sales Value (₹)',
+            data: [{% for month_data in transaction_summary %}{{ month_data.sales_value }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: chartColors.primary,
+            backgroundColor: chartColors.primary + '20',
+            tension: 0.1,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '₹' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ₹' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// ABC Analysis Chart
+const abcCtx = document.getElementById('abcAnalysisChart').getContext('2d');
+new Chart(abcCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Category A', 'Category B', 'Category C'],
+        datasets: [{
+            label: 'Number of Items',
+            data: [
+                {{ abc_analysis.category_a_count }},
+                {{ abc_analysis.category_b_count }},
+                {{ abc_analysis.category_c_count }}
+            ],
+            backgroundColor: [
+                chartColors.danger,
+                chartColors.warning,
+                chartColors.success
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Export Functions
+function exportReport(format) {
+    if (format === 'excel') {
+        alert('Excel export feature coming soon!');
+    } else if (format === 'pdf') {
+        window.print();
+    }
+}
+</script>
+
+<style>
+@media print {
+    .btn, .card-header .btn-group {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+
+
+
+{% block content %}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3>{{ plan.name }} - Plan Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Plan Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Plan Name:</strong></td>
+                                    <td>{{ plan.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Duration:</strong></td>
+                                    <td>{{ plan.duration_months }} month{{ plan.duration_months|pluralize }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Price:</strong></td>
+                                    <td><h4 class="text-success">₹{{ plan.price }}</h4></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            {% if plan.description %}
+                                <h5>Description</h5>
+                                <p>{{ plan.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'plan_list' %}" class="btn btn-secondary">Back to Plans</a>
+                    <a href="{% url 'create_membership' %}" class="btn btn-primary ms-2">Create Membership with this Plan</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

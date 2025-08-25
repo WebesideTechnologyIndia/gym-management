@@ -1,0 +1,440 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}{{ item.name }} - Inventory Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-box me-2"></i>{{ item.name }}</h2>
+        <p class="text-muted mb-0">{{ item.brand|default:"No Brand" }} - {{ item.category.name }}</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-primary me-2">
+            <i class="fas fa-exchange-alt me-2"></i>Add Transaction
+        </a>
+        <a href="{% url 'inventory:inventory_list' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Inventory
+        </a>
+    </div>
+</div>
+
+<!-- Stock Level Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center {% if item.current_stock == 0 %}bg-danger{% elif item.is_low_stock %}bg-warning{% else %}bg-success{% endif %} text-white">
+            <div class="card-body">
+                <i class="fas fa-warehouse fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ item.current_stock }}</h3>
+                <small>Current Stock ({{ item.unit }})</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-rupee-sign fa-2x mb-2"></i>
+                <h3 class="mb-1">₹{{ item.total_value|floatformat:0 }}</h3>
+                <small>Total Value</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ item.stock_percentage|floatformat:1 }}%</h3>
+                <small>Stock Level</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-secondary text-white">
+            <div class="card-body">
+                <i class="fas fa-exchange-alt fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ transactions|length }}</h3>
+                <small>Total Transactions</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Item Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Item Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Name:</td>
+                                <td>{{ item.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Category:</td>
+                                <td>{{ item.category.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Brand:</td>
+                                <td>{{ item.brand|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">SKU:</td>
+                                <td>{{ item.sku|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Unit:</td>
+                                <td>{{ item.unit|title }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Location:</td>
+                                <td>{{ item.location|default:"Not specified" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Cost Price:</td>
+                                <td>₹{{ item.cost_price|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Selling Price:</td>
+                                <td>₹{{ item.selling_price|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Primary Vendor:</td>
+                                <td>{{ item.primary_vendor.name|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Auto Reorder:</td>
+                                <td>
+                                    {% if item.auto_reorder %}
+                                    <span class="badge bg-success">Enabled</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Disabled</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Has Expiry:</td>
+                                <td>
+                                    {% if item.has_expiry %}
+                                    <span class="badge bg-warning">Yes</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Created:</td>
+                                <td>{{ item.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if item.description %}
+                <div class="mt-3">
+                    <h6>Description:</h6>
+                    <p class="text-muted">{{ item.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stock Level Progress -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Stock Level Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Current Stock Level</span>
+                                <span>{{ item.current_stock }} / {{ item.maximum_stock }} {{ item.unit }}</span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar {% if item.current_stock == 0 %}bg-danger{% elif item.is_low_stock %}bg-warning{% elif item.stock_percentage < 50 %}bg-info{% else %}bg-success{% endif %}" 
+                                     style="width: {{ item.stock_percentage }}%">
+                                    {{ item.stock_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="border-end">
+                                    <h6 class="text-muted mb-1">Minimum</h6>
+                                    <h5 class="text-warning">{{ item.minimum_stock }}</h5>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="border-end">
+                                    <h6 class="text-muted mb-1">Current</h6>
+                                    <h5 class="{% if item.is_low_stock %}text-warning{% else %}text-success{% endif %}">{{ item.current_stock }}</h5>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <h6 class="text-muted mb-1">Maximum</h6>
+                                <h5 class="text-info">{{ item.maximum_stock }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="mb-3">
+                                {% if item.auto_reorder and item.is_low_stock %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Reorder Alert!</strong><br>
+                                    Suggest reorder: {{ item.reorder_quantity }} {{ item.unit }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Add Stock
+                                </a>
+                                <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-outline-danger">
+                                    <i class="fas fa-minus me-2"></i>Remove Stock
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Transaction History
+                </h5>
+                <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-2"></i>New Transaction
+                </a>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                <th>Stock After</th>
+                                <th>Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.transaction_date|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if transaction.transaction_type == 'purchase' %}success{% elif transaction.transaction_type == 'sale' %}primary{% elif transaction.transaction_type == 'damage' %}danger{% else %}secondary{% endif %}">
+                                        {{ transaction.transaction_type|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if transaction.transaction_type in 'purchase,adjustment,return' %}
+                                    <span class="text-success">+{{ transaction.quantity }}</span>
+                                    {% else %}
+                                    <span class="text-danger">-{{ transaction.quantity }}</span>
+                                    {% endif %}
+                                    {{ item.unit }}
+                                </td>
+                                <td>₹{{ transaction.unit_price|floatformat:2 }}</td>
+                                <td>₹{{ transaction.total_amount|floatformat:2 }}</td>
+                                <td>{{ transaction.stock_after }} {{ item.unit }}</td>
+                                <td>{{ transaction.reference_number|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Transaction Summary -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h6>Total Purchases</h6>
+                            <h4 class="text-success">{{ total_purchases }} {{ item.unit }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Total Sales</h6>
+                            <h4 class="text-primary">{{ total_sales }} {{ item.unit }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Total Value Purchased</h6>
+                            <h4 class="text-info">₹{{ total_purchase_value|floatformat:0 }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Average Purchase Price</h6>
+                            <h4 class="text-secondary">₹{{ avg_purchase_price|floatformat:2 }}</h4>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Transaction History</h5>
+                    <p class="text-muted">No transactions have been recorded for this item yet.</p>
+                    <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add First Transaction
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Stock Status -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Stock Status
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if item.current_stock == 0 %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Out of Stock!</strong><br>
+                    This item is currently out of stock.
+                </div>
+                {% elif item.is_low_stock %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Low Stock Alert!</strong><br>
+                    Stock is below minimum level ({{ item.minimum_stock }} {{ item.unit }}).
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Stock Available</strong><br>
+                    Stock level is adequate.
+                </div>
+                {% endif %}
+                
+                {% if item.auto_reorder and item.is_low_stock %}
+                <div class="alert alert-info mt-2">
+                    <i class="fas fa-bell me-2"></i>
+                    <strong>Auto Reorder Suggestion:</strong><br>
+                    Order {{ item.reorder_quantity }} {{ item.unit }}
+                    {% if item.primary_vendor %}
+                    from {{ item.primary_vendor.name }}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Purchase Stock
+                    </a>
+                    <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>Sale Transaction
+                    </a>
+                    <a href="{% url 'inventory:stock_transaction' gym_id item.id %}" class="btn btn-warning">
+                        <i class="fas fa-edit me-2"></i>Stock Adjustment
+                    </a>
+                    <button class="btn btn-outline-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Details
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vendor Information -->
+        {% if item.primary_vendor %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-truck me-2"></i>Primary Vendor
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ item.primary_vendor.name }}</h6>
+                <p class="text-muted mb-2">{{ item.primary_vendor.contact_person|default:"" }}</p>
+                
+                <div class="mb-2">
+                    <i class="fas fa-phone text-primary me-2"></i>
+                    <a href="tel:{{ item.primary_vendor.phone }}">{{ item.primary_vendor.phone }}</a>
+                </div>
+                
+                {% if item.primary_vendor.email %}
+                <div class="mb-2">
+                    <i class="fas fa-envelope text-primary me-2"></i>
+                    <a href="mailto:{{ item.primary_vendor.email }}">{{ item.primary_vendor.email }}</a>
+                </div>
+                {% endif %}
+                
+                <div class="mb-2">
+                    <i class="fas fa-star text-warning me-2"></i>
+                    Rating: {{ item.primary_vendor.rating }}/5
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                {% for transaction in transactions|slice:":5" %}
+                <div class="d-flex justify-content-between align-items-center {% if not forloop.last %}border-bottom{% endif %} py-2">
+                    <div>
+                        <small class="text-muted">{{ transaction.transaction_date|date:"M d" }}</small>
+                        <div class="fw-bold">{{ transaction.transaction_type|title }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold {% if transaction.transaction_type in 'purchase,adjustment,return' %}text-success{% else %}text-danger{% endif %}">
+                            {% if transaction.transaction_type in 'purchase,adjustment,return' %}+{% else %}-{% endif %}{{ transaction.quantity }}
+                        </div>
+                        <small class="text-muted">₹{{ transaction.total_amount|floatformat:0 }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted mb-0">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

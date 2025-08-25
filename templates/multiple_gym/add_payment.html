@@ -1,0 +1,144 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}Add Payment{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>Add Payment
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Membership Info -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-user me-2"></i>Member: {{ membership.member_name.user.get_full_name }}</h6>
+                        <p class="mb-1"><i class="fas fa-clipboard-list me-2"></i>Plan: {{ membership.plan.name }}</p>
+                        <p class="mb-1"><i class="fas fa-rupee-sign me-2"></i>Total Amount: ₹{{ membership.total_amount
+                            }}</p>
+                        <p class="mb-1"><i class="fas fa-check-circle me-2"></i>Paid Amount: ₹{{ membership.paid_amount
+                            }}</p>
+                        <p class="mb-0"><i class="fas fa-exclamation-circle me-2"></i><strong>Remaining: ₹{{
+                                membership.remaining_amount }}</strong></p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Payment Amount -->
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">
+                                <i class="fas fa-rupee-sign me-1"></i>Payment Amount
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" name="amount" id="amount" min="1"
+                                    max="{{ remaining_amount }}" step="0.01" required>
+                            </div>
+                            <div class="form-text">Maximum amount: ₹{{ remaining_amount }}</div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-3">
+                            <label for="payment_method" class="form-label">
+                                <i class="fas fa-credit-card me-1"></i>Payment Method
+                            </label>
+                            <select class="form-select" name="payment_method" id="payment_method" required>
+                                <option value="">Select Payment Method</option>
+                                <option value="cash">Cash</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="upi">UPI</option>
+                                <option value="net_banking">Net Banking</option>
+                                <option value="cheque">Cheque</option>
+                            </select>
+                        </div>
+
+                        <!-- Next Payment Reminder -->
+                        <div class="mb-3" id="reminderSection">
+                            <label for="next_payment_date" class="form-label">
+                                <i class="fas fa-bell me-1"></i>Next Payment Reminder (Optional)
+                            </label>
+                            <input type="date" class="form-control" name="next_payment_date" id="next_payment_date">
+                            <div class="form-text">Set reminder for next payment (only if this won't complete the
+                                payment)</div>
+                        </div>
+
+                        <!-- Payment Notes -->
+                        <div class="mb-3">
+                            <label for="payment_notes" class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>Payment Notes (Optional)
+                            </label>
+                            <textarea class="form-control" name="payment_notes" id="payment_notes" rows="3"
+                                placeholder="Any additional notes about this payment..."></textarea>
+                        </div>
+
+                        <!-- Remaining Amount Preview -->
+                        <div class="alert alert-warning" id="remainingPreview" style="display: none;">
+                            <i class="fas fa-calculator me-2"></i>
+                            <strong>After this payment, remaining amount will be: ₹<span id="newRemaining">{{
+                                    remaining_amount }}</span></strong>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Record Payment
+                            </button>
+                            <a href="{% url 'membership_detail' membership.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Membership
+                            </a>
+                            <a href="{% url 'payment_history' membership.pk %}" class="btn btn-outline-info">
+                                <i class="fas fa-history me-1"></i>Payment History
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const amountInput = document.getElementById('amount');
+        const remainingPreview = document.getElementById('remainingPreview');
+        const newRemainingSpan = document.getElementById('newRemaining');
+        const reminderSection = document.getElementById('reminderSection');
+        const reminderInput = document.getElementById('next_payment_date');
+
+        const totalRemaining = {{ remaining_amount }
+    };
+
+    if (amountInput) {
+        amountInput.addEventListener('input', function () {
+            const paymentAmount = parseFloat(this.value) || 0;
+            const newRemaining = totalRemaining - paymentAmount;
+
+            if (paymentAmount > 0) {
+                newRemainingSpan.textContent = newRemaining.toFixed(2);
+                remainingPreview.style.display = 'block';
+
+                // Show/hide reminder section based on whether payment completes the membership
+                if (newRemaining <= 0) {
+                    reminderSection.style.display = 'none';
+                    reminderInput.removeAttribute('required');
+                } else {
+                    reminderSection.style.display = 'block';
+                }
+            } else {
+                remainingPreview.style.display = 'none';
+                reminderSection.style.display = 'block';
+            }
+        });
+    }
+
+    // Focus on amount input
+    if (amountInput) {
+        amountInput.focus();
+    }
+});
+</script>
+{% endblock %}

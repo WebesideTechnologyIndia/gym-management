@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gym Management System{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .stats-card-2 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .stats-card-3 {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        /* Sidebar Navigation Styles */
+        .nav-link {
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+        }
+
+        /* Submenu Styles */
+        .submenu {
+            margin-left: 20px;
+            margin-top: 10px;
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+            padding-left: 15px;
+        }
+
+        .submenu .nav-link {
+            font-size: 0.9rem;
+            padding: 8px 12px;
+        }
+
+        .collapse-toggle {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .collapse-toggle.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        .collapse-toggle::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            float: right;
+            transition: transform 0.3s ease;
+        }
+
+        /* Equipment submenu styles */
+        .equipment-submenu {
+            margin-left: 15px;
+            margin-top: 5px;
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            padding-left: 10px;
+        }
+
+        .equipment-submenu .nav-link {
+            font-size: 0.8rem;
+            padding: 6px 10px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-dumbbell me-2"></i>Gym Management
+            </a>
+
+            {% if user.is_authenticated %}
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>{{ user.username }}
+                        <span class="badge bg-secondary ms-1">{{ user.get_user_type_display }}</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a></li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid">
+        <div class="row">
+            {% if user.is_authenticated and user.user_type != 'member' %}
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar text-white p-3">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-user-circle fa-3x mb-2"></i>
+                        <h6>{{ user.get_user_type_display }}</h6>
+                        <small>{{ user.username }}</small>
+                    </div>
+
+                    <ul class="nav flex-column">
+                        {% if user.user_type == 'superadmin' %}
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'superadmin_dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'create_gym' %}">
+                                <i class="fas fa-plus me-2"></i>Create Gym
+                            </a>
+                        </li>
+                        
+                        {% elif user.user_type == 'gymadmin' %}
+                        <!-- Check if gym_id is available in context -->
+                        {% if gym_id %}
+                        <!-- Main Dashboard -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'gymadmin_dashboard' gym_id %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+
+                        <!-- Member Management -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#memberSubmenu" role="button">
+                                <i class="fas fa-users me-2"></i>Member Management
+                            </a>
+                            <div class="collapse submenu" id="memberSubmenu">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'add_member' gym_id %}">
+                                            <i class="fas fa-user-plus me-2"></i>Add Member
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'gym_detail' gym_id %}">
+                                            <i class="fas fa-users me-2"></i>View Members
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'create_membership' %}">
+                                            <i class="fas fa-id-card me-2"></i>Create Membership
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'membership_list' %}">
+                                            <i class="fas fa-list me-2"></i>View Memberships
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Inventory Management -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#inventorySubmenu" role="button">
+                                <i class="fas fa-boxes me-2"></i>Inventory Management
+                            </a>
+                            <div class="collapse submenu" id="inventorySubmenu">
+                                <ul class="nav flex-column">
+                                    <!-- Dashboard -->
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'inventory:dashboard' gym_id %}">
+                                            <i class="fas fa-chart-pie me-2"></i>Inventory Dashboard
+                                        </a>
+                                    </li>
+
+                                    <!-- Equipment Section -->
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#equipmentSubmenu" role="button">
+                                            <i class="fas fa-dumbbell me-2"></i>Equipment
+                                        </a>
+                                        <div class="collapse equipment-submenu" id="equipmentSubmenu">
+                                            <ul class="nav flex-column">
+                                                <li class="nav-item">
+                                                    <a class="nav-link text-white" href="{% url 'inventory:equipment_list' gym_id %}">
+                                                        <i class="fas fa-list me-2"></i>Equipment List
+                                                    </a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link text-white" href="{% url 'inventory:add_equipment' gym_id %}">
+                                                        <i class="fas fa-plus me-2"></i>Add Equipment
+                                                    </a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link text-white" href="{% url 'inventory:equipment_category_list' %}">
+                                                        <i class="fas fa-tags me-2"></i>Categories
+                                                    </a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link text-white" href="{% url 'inventory:add_equipment_category' %}">
+                                                        <i class="fas fa-plus-circle me-2"></i>Add Category
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </li>
+
+                                    <!-- Maintenance Section -->
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#maintenanceSubmenu" role="button">
+                                            <i class="fas fa-tools me-2"></i>Maintenance
+                                        </a>
+                                        <div class="collapse equipment-submenu" id="maintenanceSubmenu">
+                                            <ul class="nav flex-column">
+                                                <li class="nav-item">
+                                                    <a class="nav-link text-white" href="{% url 'inventory:maintenance_list' gym_id %}">
+                                                        <i class="fas fa-list me-2"></i>Maintenance Records
+                                                    </a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link text-white" href="{% url 'inventory:schedule_maintenance' gym_id %}">
+                                                        <i class="fas fa-calendar-plus me-2"></i>Schedule Maintenance
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </li>
+
+                                    <!-- Inventory Items -->
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'inventory:inventory_list' gym_id %}">
+                                            <i class="fas fa-box me-2"></i>Stock Items
+                                        </a>
+                                    </li>
+
+                                    <!-- Vendors -->
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'inventory:vendor_list' %}">
+                                            <i class="fas fa-truck me-2"></i>Vendors
+                                        </a>
+                                    </li>
+
+                                    <!-- Alerts -->
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'inventory:alerts_view' gym_id %}">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>Alerts
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Plans Management -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#plansSubmenu" role="button">
+                                <i class="fas fa-clipboard-list me-2"></i>Plans Management
+                            </a>
+                            <div class="collapse submenu" id="plansSubmenu">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'create_plan' %}">
+                                            <i class="fas fa-plus me-2"></i>Create Plan
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'plan_list' %}">
+                                            <i class="fas fa-list me-2"></i>View Plans
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Reports -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#reportsSubmenu" role="button">
+                                <i class="fas fa-chart-bar me-2"></i>Reports
+                            </a>
+                            <div class="collapse submenu" id="reportsSubmenu">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'inventory:equipment_reports' gym_id %}">
+                                            <i class="fas fa-dumbbell me-2"></i>Equipment Reports
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'inventory:inventory_reports' gym_id %}">
+                                            <i class="fas fa-boxes me-2"></i>Inventory Reports
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Gym Details -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'gym_detail' gym_id %}">
+                                <i class="fas fa-building me-2"></i>Gym Details
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Content Area -->
+            <div
+                class="{% if user.is_authenticated and user.user_type != 'member' %}col-md-9 col-lg-10{% else %}col-12{% endif %}">
+                <div class="p-4">
+                    <!-- Messages -->
+                    {% if messages %}
+                    <div class="row">
+                        <div class="col-12">
+                            {% for message in messages %}
+                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                                role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Page Content -->
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    // Auto-expand submenu based on current page
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentPath = window.location.pathname;
+        
+        // Check if current page is in inventory section
+        if (currentPath.includes('/inventory/')) {
+            const inventorySubmenu = document.getElementById('inventorySubmenu');
+            if (inventorySubmenu) {
+                inventorySubmenu.classList.add('show');
+            }
+
+            // Auto-expand equipment submenu for equipment-related pages
+            if (currentPath.includes('/equipment/') || currentPath.includes('/category/')) {
+                const equipmentSubmenu = document.getElementById('equipmentSubmenu');
+                if (equipmentSubmenu) {
+                    equipmentSubmenu.classList.add('show');
+                }
+            }
+
+            // Auto-expand maintenance submenu for maintenance-related pages
+            if (currentPath.includes('/maintenance/')) {
+                const maintenanceSubmenu = document.getElementById('maintenanceSubmenu');
+                if (maintenanceSubmenu) {
+                    maintenanceSubmenu.classList.add('show');
+                }
+            }
+        }
+        
+        // Check if current page is in member section
+        if (currentPath.includes('/member/') || currentPath.includes('/membership/')) {
+            const memberSubmenu = document.getElementById('memberSubmenu');
+            if (memberSubmenu) {
+                memberSubmenu.classList.add('show');
+            }
+        }
+        
+        // Check if current page is in plans section
+        if (currentPath.includes('/plan/')) {
+            const plansSubmenu = document.getElementById('plansSubmenu');
+            if (plansSubmenu) {
+                plansSubmenu.classList.add('show');
+            }
+        }
+        
+        // Check if current page is in reports section
+        if (currentPath.includes('/reports/')) {
+            const reportsSubmenu = document.getElementById('reportsSubmenu');
+            if (reportsSubmenu) {
+                reportsSubmenu.classList.add('show');
+            }
+        }
+        
+        // Highlight active nav link
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            if (link.href === window.location.href) {
+                link.classList.add('active');
+            }
+        });
+    });
+    </script>
+</body>
+
+</html>

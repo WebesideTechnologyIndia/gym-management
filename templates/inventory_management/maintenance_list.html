@@ -1,0 +1,336 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Maintenance Records - Gym Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-tools me-2"></i>Maintenance Records</h2>
+        <p class="text-muted mb-0">Track and manage equipment maintenance</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'inventory:schedule_maintenance' gym_id %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Schedule Maintenance
+        </a>
+        <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                    <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="preventive" {% if type_filter == 'preventive' %}selected{% endif %}>Preventive</option>
+                    <option value="corrective" {% if type_filter == 'corrective' %}selected{% endif %}>Corrective</option>
+                    <option value="emergency" {% if type_filter == 'emergency' %}selected{% endif %}>Emergency</option>
+                    <option value="inspection" {% if type_filter == 'inspection' %}selected{% endif %}>Inspection</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Maintenance Records -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-list me-2"></i>Maintenance Records
+            <span class="badge bg-primary ms-2">{{ maintenance_records|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if maintenance_records %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Equipment</th>
+                        <th>Type</th>
+                        <th>Scheduled Date</th>
+                        <th>Status</th>
+                        <th>Technician</th>
+                        <th>Cost</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for maintenance in maintenance_records %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if maintenance.equipment.image %}
+                                <img src="{{ maintenance.equipment.image.url }}" alt="{{ maintenance.equipment.name }}" 
+                                     class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="fas fa-dumbbell text-muted"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ maintenance.equipment.name }}</strong>
+                                    <br><small class="text-muted">{{ maintenance.equipment.brand }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if maintenance.maintenance_type == 'emergency' %}danger{% elif maintenance.maintenance_type == 'corrective' %}warning{% elif maintenance.maintenance_type == 'preventive' %}success{% else %}info{% endif %}">
+                                {{ maintenance.maintenance_type|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <i class="fas fa-calendar me-1"></i>{{ maintenance.scheduled_date|date:"M d, Y" }}
+                            {% if maintenance.actual_date %}
+                            <br><small class="text-muted">
+                                <i class="fas fa-check me-1"></i>Completed: {{ maintenance.actual_date|date:"M d, Y" }}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if maintenance.status == 'scheduled' %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-clock me-1"></i>Scheduled
+                            </span>
+                            {% elif maintenance.status == 'in_progress' %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-spinner me-1"></i>In Progress
+                            </span>
+                            {% elif maintenance.status == 'completed' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>Completed
+                            </span>
+                            {% elif maintenance.status == 'cancelled' %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-times me-1"></i>Cancelled
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ maintenance.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if maintenance.technician_name %}
+                            <i class="fas fa-user me-1"></i>{{ maintenance.technician_name }}
+                            {% else %}
+                            <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                            {% if maintenance.vendor %}
+                            <br><small class="text-muted">
+                                <i class="fas fa-building me-1"></i>{{ maintenance.vendor.name }}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if maintenance.total_cost %}
+                            <strong class="text-success">₹{{ maintenance.total_cost|floatformat:2 }}</strong>
+                            {% if maintenance.labor_cost or maintenance.parts_cost %}
+                            <br><small class="text-muted">
+                                {% if maintenance.labor_cost %}L: ₹{{ maintenance.labor_cost|floatformat:0 }}{% endif %}
+                                {% if maintenance.parts_cost %}{% if maintenance.labor_cost %} | {% endif %}P: ₹{{ maintenance.parts_cost|floatformat:0 }}{% endif %}
+                            </small>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if maintenance.status == 'scheduled' or maintenance.status == 'in_progress' %}
+                                <a href="{% url 'inventory:update_maintenance' gym_id maintenance.id %}" 
+                                   class="btn btn-outline-primary" title="Update">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-outline-info" onclick="viewMaintenanceDetails({{ maintenance.id }})" 
+                                        title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if maintenance.status == 'scheduled' %}
+                                <button class="btn btn-outline-danger" onclick="cancelMaintenance({{ maintenance.id }})" 
+                                        title="Cancel">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No Maintenance Records Found</h5>
+            <p class="text-muted">No maintenance records match your current filters.</p>
+            <a href="{% url 'inventory:schedule_maintenance' gym_id %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Schedule First Maintenance
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Maintenance Statistics -->
+{% if maintenance_records %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h4>{{ maintenance_records|length }}</h4>
+                <small>Total Records</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h4>
+                    {% with scheduled_count=0 %}
+                    {% for m in maintenance_records %}
+                        {% if m.status == 'scheduled' %}
+                            {% with scheduled_count=scheduled_count|add:1 %}{% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ scheduled_count }}
+                    {% endwith %}
+                </h4>
+                <small>Scheduled</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4>
+                    {% with completed_count=0 %}
+                    {% for m in maintenance_records %}
+                        {% if m.status == 'completed' %}
+                            {% with completed_count=completed_count|add:1 %}{% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ completed_count }}
+                    {% endwith %}
+                </h4>
+                <small>Completed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4>
+                    ₹{% with total_cost=0 %}
+                    {% for m in maintenance_records %}
+                        {% if m.total_cost %}
+                            {% with total_cost=total_cost|add:m.total_cost %}{% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ total_cost|floatformat:0 }}
+                    {% endwith %}
+                </h4>
+                <small>Total Cost</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Maintenance Details Modal -->
+<div class="modal fade" id="maintenanceDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Maintenance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="maintenanceDetailsContent">
+                <!-- Content will be loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+
+<script>
+// Get CSRF token
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// View maintenance details
+function viewMaintenanceDetails(maintenanceId) {
+    // For now, show basic info - you can enhance this with AJAX
+    const modal = new bootstrap.Modal(document.getElementById('maintenanceDetailsModal'));
+    document.getElementById('maintenanceDetailsContent').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading maintenance details...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // You can add AJAX call here to load detailed maintenance info
+    setTimeout(() => {
+        document.getElementById('maintenanceDetailsContent').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Detailed maintenance view will be implemented soon. 
+                <br>Maintenance ID: ${maintenanceId}
+            </div>
+        `;
+    }, 1000);
+}
+
+// Cancel maintenance
+function cancelMaintenance(maintenanceId) {
+    if (confirm('Are you sure you want to cancel this maintenance?')) {
+        // Add AJAX call to cancel maintenance
+        alert('Cancel maintenance functionality will be implemented soon.');
+    }
+}
+
+// Auto-refresh every 5 minutes
+setInterval(function() {
+    if (document.getElementById('auto-refresh')?.checked) {
+        location.reload();
+    }
+}, 300000);
+</script>
+
+<!-- Auto-refresh option -->
+<div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1050;">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="auto-refresh">
+        <label class="form-check-label small text-muted" for="auto-refresh">
+            Auto-refresh (5 min)
+        </label>
+    </div>
+</div>
+
+{% endblock%}

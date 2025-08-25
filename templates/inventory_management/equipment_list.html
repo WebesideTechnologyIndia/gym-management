@@ -1,0 +1,354 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Equipment Management - {{ gym.name|default:"Gym Management" }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-dumbbell me-2"></i>Equipment Management</h2>
+        <p class="text-muted mb-0">Manage gym equipment and assets</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:add_equipment' gym_id %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Equipment
+        </a>
+        <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search Equipment</label>
+                <input type="text" name="search" class="form-control"
+                    placeholder="Search by name, brand, or serial number..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <select name="category" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="working" {% if status_filter == 'working' %}selected{% endif %}>Working</option>
+                    <option value="maintenance" {% if status_filter == 'maintenance' %}selected{% endif %}>Under
+                        Maintenance</option>
+                    <option value="repair" {% if status_filter == 'repair' %}selected{% endif %}>Under Repair</option>
+                    <option value="out_of_order" {% if status_filter == 'out_of_order' %}selected{% endif %}>Out of Order
+                    </option>
+                    <option value="disposed" {% if status_filter == 'disposed' %}selected{% endif %}>Disposed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Equipment Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <h3 class="mb-1">{{ equipment_list|length }}</h3>
+                <small>Total Equipment</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <h3 class="mb-1">{{ equipment_list|length }}</h3>
+                <small>Working Equipment</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <h3 class="mb-1">0</h3>
+                <small>Maintenance Due</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-danger text-white">
+            <div class="card-body">
+                <h3 class="mb-1">0</h3>
+                <small>Out of Order</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Equipment List -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>Equipment List
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="view-type" id="card-view" checked>
+                <label class="btn btn-outline-primary" for="card-view">
+                    <i class="fas fa-th-large"></i>
+                </label>
+                <input type="radio" class="btn-check" name="view-type" id="table-view">
+                <label class="btn btn-outline-primary" for="table-view">
+                    <i class="fas fa-list"></i>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- DEBUG INFO (temporary - remove after fixing) -->
+        <div class="alert alert-info">
+            <strong>🔍 Debug:</strong> Found {{ equipment_list|length }} equipment items
+        </div>
+
+        {% if equipment_list %}
+        <!-- Card View -->
+        <div id="card-view-content" class="row">
+            {% for equipment in equipment_list %}
+            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                <div class="card h-100 equipment-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="equipment-icon">
+                                <i class="fas fa-dumbbell fa-2x text-primary"></i>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                    data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'inventory:equipment_detail' gym_id equipment.id %}">
+                                            <i class="fas fa-eye me-2"></i>View Details
+                                        </a></li>
+                                    <li><a class="dropdown-item" href="#">
+                                            <i class="fas fa-tools me-2"></i>Schedule Maintenance
+                                        </a></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li><a class="dropdown-item text-danger" href="#">
+                                            <i class="fas fa-trash me-2"></i>Delete
+                                        </a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <h5 class="card-title">{{ equipment.name }}</h5>
+                        <p class="text-muted mb-2">
+                            <strong>Brand:</strong> {{ equipment.brand }}<br>
+                            <strong>Serial:</strong> {{ equipment.serial_number }}<br>
+                            <strong>Location:</strong> {{ equipment.location|default:"Not specified" }}
+                        </p>
+
+                        <div class="mb-3">
+                            <span
+                                class="badge bg-{% if equipment.status == 'working' %}success{% elif equipment.status == 'maintenance' %}warning{% elif equipment.status == 'repair' %}danger{% else %}secondary{% endif %} me-2">
+                                {{ equipment.status|title }}
+                            </span>
+                            <span
+                                class="badge bg-{% if equipment.condition == 'excellent' %}success{% elif equipment.condition == 'good' %}primary{% elif equipment.condition == 'fair' %}warning{% else %}danger{% endif %}">
+                                {{ equipment.condition|title }}
+                            </span>
+                        </div>
+
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <small class="text-muted">Purchase Date</small>
+                                <div class="fw-bold">{{ equipment.purchase_date|date:"M Y" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Price</small>
+                                <div class="fw-bold">₹{{ equipment.purchase_price|floatformat:0 }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Warranty Info -->
+                        {% if equipment.warranty_start_date and equipment.warranty_end_date %}
+                        <div class="mt-3 p-2 bg-light rounded">
+                            <small class="text-muted">Warranty:</small>
+                            <div class="fw-bold text-success">
+                                {{ equipment.warranty_start_date|date:"M d, Y" }} - {{
+                                equipment.warranty_end_date|date:"M d, Y" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'inventory:equipment_detail' gym_id equipment.id %}"
+                                class="btn btn-info me-2">
+                                <i class="fas fa-dumbbell me-2"></i>View Equipment
+                            </a>
+                            <a href="#" class="btn btn-primary btn-sm">
+                                <i class="fas fa-tools me-1"></i>Maintain
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Table View -->
+        <div id="table-view-content" class="table-responsive" style="display: none;">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Equipment</th>
+                        <th>Brand/Model</th>
+                        <th>Serial Number</th>
+                        <th>Status</th>
+                        <th>Condition</th>
+                        <th>Location</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipment in equipment_list %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-dumbbell text-primary me-2"></i>
+                                <div>
+                                    <div class="fw-bold">{{ equipment.name }}</div>
+                                    <small class="text-muted">{{ equipment.category.name|default:"No Category"
+                                        }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>{{ equipment.brand }}</div>
+                            <small class="text-muted">{{ equipment.model_number|default:"-" }}</small>
+                        </td>
+                        <td>{{ equipment.serial_number }}</td>
+                        <td>
+                            <span
+                                class="badge bg-{% if equipment.status == 'working' %}success{% elif equipment.status == 'maintenance' %}warning{% elif equipment.status == 'repair' %}danger{% else %}secondary{% endif %}">
+                                {{ equipment.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <span
+                                class="badge bg-{% if equipment.condition == 'excellent' %}success{% elif equipment.condition == 'good' %}primary{% elif equipment.condition == 'fair' %}warning{% else %}danger{% endif %}">
+                                {{ equipment.condition|title }}
+                            </span>
+                        </td>
+                        <td>{{ equipment.location|default:"-" }}</td>
+                        <td>₹{{ equipment.purchase_price|floatformat:0 }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'inventory:equipment_detail' gym_id equipment.id %}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-warning" title="Schedule Maintenance">
+                                    <i class="fas fa-tools"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-dumbbell fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No Equipment Found</h5>
+            <p class="text-muted">Start by adding some equipment to your gym inventory.</p>
+            <a href="{% url 'inventory:add_equipment' gym_id %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Equipment
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const cardViewBtn = document.getElementById('card-view');
+        const tableViewBtn = document.getElementById('table-view');
+        const cardViewContent = document.getElementById('card-view-content');
+        const tableViewContent = document.getElementById('table-view-content');
+
+        cardViewBtn.addEventListener('change', function () {
+            if (this.checked) {
+                cardViewContent.style.display = 'block';
+                tableViewContent.style.display = 'none';
+            }
+        });
+
+        tableViewBtn.addEventListener('change', function () {
+            if (this.checked) {
+                cardViewContent.style.display = 'none';
+                tableViewContent.style.display = 'block';
+            }
+        });
+    });
+</script>
+
+<style>
+    .equipment-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border: 1px solid #e3e6f0;
+    }
+
+    .equipment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .equipment-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 123, 255, 0.1);
+        border-radius: 10px;
+    }
+
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+</style>
+{% endblock %}

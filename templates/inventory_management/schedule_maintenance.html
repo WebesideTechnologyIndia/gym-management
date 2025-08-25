@@ -1,0 +1,232 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Schedule Maintenance - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-calendar-plus me-2"></i>Schedule Maintenance</h2>
+        <p class="text-muted mb-0">{% if equipment %}For {{ equipment.name }}{% else %}Schedule equipment maintenance{% endif %}</p>
+    </div>
+    <a href="{% url 'inventory:maintenance_list' gym_id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Maintenance List
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>Maintenance Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <!-- Equipment Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Equipment Information</h6>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Select Equipment *</label>
+                            <select name="equipment" class="form-select" required {% if equipment %}disabled{% endif %}>
+                                {% if equipment %}
+                                <option value="{{ equipment.id }}" selected>{{ equipment.name }} - {{ equipment.brand }} ({{ equipment.serial_number }})</option>
+                                {% else %}
+                                <option value="">Choose equipment for maintenance</option>
+                                {% for eq in equipment_list %}
+                                <option value="{{ eq.id }}">{{ eq.name }} - {{ eq.brand }} ({{ eq.serial_number }})</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                            {% if equipment %}
+                            <input type="hidden" name="equipment" value="{{ equipment.id }}">
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Details -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Maintenance Details</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Maintenance Type *</label>
+                            <select name="maintenance_type" class="form-select" required>
+                                <option value="">Select Type</option>
+                                <option value="preventive">Preventive Maintenance</option>
+                                <option value="corrective">Corrective Maintenance</option>
+                                <option value="emergency">Emergency Repair</option>
+                                <option value="inspection">Inspection</option>
+                                <option value="calibration">Calibration</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Scheduled Date *</label>
+                            <input type="date" name="scheduled_date" class="form-control" required min="{{ today|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Describe the maintenance work to be performed..." required></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Technician & Vendor -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Assignment</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Technician Name</label>
+                            <input type="text" name="technician_name" class="form-control" placeholder="e.g., John Doe">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vendor/Service Provider</label>
+                            <select name="vendor" class="form-select">
+                                <option value="">Select Vendor (Optional)</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'inventory:maintenance_list' gym_id %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-calendar-plus me-2"></i>Schedule Maintenance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        {% if equipment %}
+        <!-- Equipment Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-dumbbell me-2"></i>Equipment Info
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Name:</strong> {{ equipment.name }}
+                </div>
+                <div class="mb-2">
+                    <strong>Brand:</strong> {{ equipment.brand }}
+                </div>
+                <div class="mb-2">
+                    <strong>Serial:</strong> {{ equipment.serial_number }}
+                </div>
+                <div class="mb-2">
+                    <strong>Status:</strong>
+                    <span class="badge bg-{% if equipment.status == 'working' %}success{% else %}warning{% endif %}">
+                        {{ equipment.status|title }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Last Maintenance:</strong> 
+                    {{ equipment.last_maintenance_date|default:"Never" }}
+                </div>
+                <div class="mb-2">
+                    <strong>Location:</strong> {{ equipment.location|default:"Not specified" }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Maintenance Types Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Maintenance Types
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><span class="badge bg-success me-2">Preventive</span></h6>
+                    <small class="text-muted">Regular scheduled maintenance to prevent issues</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><span class="badge bg-primary me-2">Corrective</span></h6>
+                    <small class="text-muted">Fixing identified problems or defects</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><span class="badge bg-danger me-2">Emergency</span></h6>
+                    <small class="text-muted">Urgent repairs to restore functionality</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><span class="badge bg-info me-2">Inspection</span></h6>
+                    <small class="text-muted">Regular safety and condition checks</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><span class="badge bg-warning me-2">Calibration</span></h6>
+                    <small class="text-muted">Adjusting equipment to ensure accuracy</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:add_vendor' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-plus me-2"></i>Add New Vendor
+                    </a>
+                    <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-list me-2"></i>View All Equipment
+                    </a>
+                    <a href="{% url 'inventory:maintenance_list' gym_id %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-history me-2"></i>Maintenance History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today as minimum date
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelector('input[name="scheduled_date"]').min = today;
+    
+    // Auto-suggest description based on maintenance type
+    const typeSelect = document.querySelector('select[name="maintenance_type"]');
+    const descriptionTextarea = document.querySelector('textarea[name="description"]');
+    
+    typeSelect.addEventListener('change', function() {
+        const suggestions = {
+            'preventive': 'Regular preventive maintenance including lubrication, cleaning, and inspection of all moving parts.',
+            'corrective': 'Repair and replacement of faulty components to restore equipment functionality.',
+            'emergency': 'Emergency repair to address critical equipment failure and restore operation.',
+            'inspection': 'Comprehensive safety and operational inspection to ensure equipment compliance.',
+            'calibration': 'Calibration of sensors, displays, and control systems for accurate operation.'
+        };
+        
+        if (suggestions[this.value] && !descriptionTextarea.value) {
+            descriptionTextarea.value = suggestions[this.value];
+        }
+    });
+});
+</script>
+{% endblock %}

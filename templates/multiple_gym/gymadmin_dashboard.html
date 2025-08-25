@@ -1,0 +1,114 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}Gym Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-6 mb-0">
+            <i class="fas fa-tachometer-alt me-3"></i>Gym Admin Dashboard
+        </h1>
+        <p class="text-muted">Manage your gym(s) and members</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card stats-card-2">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">My Gyms</h5>
+                        <h2 class="mb-0">{{ total_gyms }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-building fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card stats-card-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Total Members</h5>
+                        <h2 class="mb-0">{{ total_members }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gyms List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-building me-2"></i>My Gyms
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if gyms %}
+                <div class="row">
+                    {% for gym in gyms %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 border-primary">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">{{ gym.name }}</h5>
+                                <p class="card-text text-muted">{{ gym.address|truncatewords:8 }}</p>
+
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="border-end">
+                                            <h4 class="text-success mb-0">{{ gym.members.count }}</h4>
+                                            <small class="text-muted">Total Members</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-info mb-0">{{ gym.active_members_count }}
+
+                                        </h4>
+                                        <small class="text-muted">Active Members</small>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'gym_detail' gym.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a>
+                                    <a href="{% url 'add_member' gym.id %}" class="btn btn-primary">
+                                        <i class="fas fa-user-plus me-2"></i>Add Member
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Registered: {{ gym.registration_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No gyms assigned</h5>
+                    <p class="text-muted">Contact super admin to get gym access</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

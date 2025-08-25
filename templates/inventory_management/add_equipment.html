@@ -1,0 +1,262 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Add Equipment - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-plus me-2"></i>Add New Equipment</h2>
+        <p class="text-muted mb-0">Add equipment to {{ gym.name }}</p>
+    </div>
+    <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Equipment List
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-dumbbell me-2"></i>Equipment Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Basic Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Equipment Name *</label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g., Treadmill Pro X1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category *</label>
+                            <select name="category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Brand *</label>
+                            <input type="text" name="brand" class="form-control" placeholder="e.g., Life Fitness" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Model Number</label>
+                            <input type="text" name="model_number" class="form-control" placeholder="e.g., T3-5">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Serial Number *</label>
+                            <input type="text" name="serial_number" class="form-control" placeholder="e.g., LF2023001" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Location</label>
+                            <input type="text" name="location" class="form-control" placeholder="e.g., Cardio Section - Zone A">
+                        </div>
+                    </div>
+
+                    <!-- Purchase Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Purchase Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Purchase Date *</label>
+                            <input type="date" name="purchase_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Purchase Price (₹) *</label>
+                            <input type="number" name="purchase_price" class="form-control" step="0.01" min="0" placeholder="e.g., 250000" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vendor</label>
+                            <select name="vendor" class="form-select">
+                                <option value="">Select Vendor</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Invoice Number</label>
+                            <input type="text" name="invoice_number" class="form-control" placeholder="e.g., INV-2023-001">
+                        </div>
+                    </div>
+
+                    <!-- Purchase Information के बाद यह add करो -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h6 class="text-primary mb-3">Status & Condition</h6>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Status *</label>
+        <select name="status" class="form-select" required>
+            <option value="">Select Status</option>
+            <option value="working" selected>Working</option>
+            <option value="maintenance">Under Maintenance</option>
+            <option value="repair">Under Repair</option>
+            <option value="out_of_order">Out of Order</option>
+            <option value="disposed">Disposed</option>
+        </select>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Condition *</label>
+        <select name="condition" class="form-select" required>
+            <option value="">Select Condition</option>
+            <option value="excellent" selected>Excellent</option>
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+            <option value="critical">Critical</option>
+        </select>
+    </div>
+</div>
+
+                    <!-- Warranty Information -->
+                    <div class="row mb-4">
+    <div class="col-12">
+        <h6 class="text-primary mb-3">Warranty Information</h6>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Warranty Start Date *</label>
+        <input type="date" name="warranty_start_date" class="form-control" required>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Warranty Period (Months) *</label>
+        <input type="number" name="warranty_period_months" class="form-control" min="1" max="120" value="12" required>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Warranty End Date *</label>
+        <input type="date" name="warranty_end_date" class="form-control" required>
+        <div class="form-text">Auto-calculated or manually entered</div>
+    </div>
+</div>
+
+                    <!-- Additional Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Additional Information</h6>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Technical Specifications</label>
+                            <textarea name="specifications" class="form-control" rows="3" placeholder="Enter technical specifications, dimensions, power requirements, etc."></textarea>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Any additional notes or remarks"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Add Equipment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help Section -->
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>Serial Number</h6>
+                    <small class="text-muted">
+                        Make sure the serial number is unique for this gym. This helps in warranty claims and maintenance tracking.
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>Location</h6>
+                    <small class="text-muted">
+                        Be specific about equipment location. This helps members and staff locate equipment quickly.
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>Warranty</h6>
+                    <small class="text-muted">
+                        Keep track of warranty periods. The system will alert you when warranties are about to expire.
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:add_vendor' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-plus me-2"></i>Add New Vendor
+                    </a>
+                    <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-list me-2"></i>View All Equipment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Auto-calculate warranty end date
+document.addEventListener('DOMContentLoaded', function() {
+    const purchaseDateInput = document.querySelector('input[name="purchase_date"]');
+    const warrantyStartInput = document.querySelector('input[name="warranty_start_date"]');
+    const warrantyPeriodInput = document.querySelector('input[name="warranty_period_months"]');
+    const warrantyEndInput = document.querySelector('input[name="warranty_end_date"]');
+    
+    // Auto-set warranty start date to purchase date
+    purchaseDateInput.addEventListener('change', function() {
+        if (this.value && !warrantyStartInput.value) {
+            warrantyStartInput.value = this.value;
+            calculateWarrantyEndDate();
+        }
+    });
+    
+    // Calculate warranty end date when start date or period changes
+    warrantyStartInput.addEventListener('change', calculateWarrantyEndDate);
+    warrantyPeriodInput.addEventListener('change', calculateWarrantyEndDate);
+    
+    function calculateWarrantyEndDate() {
+        const startDate = warrantyStartInput.value;
+        const period = parseInt(warrantyPeriodInput.value);
+        
+        if (startDate && period) {
+            const start = new Date(startDate);
+            const end = new Date(start);
+            end.setMonth(end.getMonth() + period);
+            
+            const year = end.getFullYear();
+            const month = String(end.getMonth() + 1).padStart(2, '0');
+            const day = String(end.getDate()).padStart(2, '0');
+            
+            warrantyEndInput.value = `${year}-${month}-${day}`;
+        }
+    }
+});
+</script>
+{% endblock %}

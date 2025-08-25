@@ -1,0 +1,294 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}{{ equipment.name }} - Equipment Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-dumbbell me-2"></i>{{ equipment.name }}</h2>
+        <p class="text-muted mb-0">{{ equipment.brand }} - {{ equipment.serial_number }}</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:schedule_equipment_maintenance' gym_id equipment.id %}" class="btn btn-warning me-2">
+            <i class="fas fa-tools me-2"></i>Schedule Maintenance
+        </a>
+        <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Equipment
+        </a>
+    </div>
+</div>
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center {% if equipment.status == 'working' %}bg-success{% elif equipment.status == 'maintenance' %}bg-warning{% else %}bg-danger{% endif %} text-white">
+            <div class="card-body">
+                <i class="fas fa-cog fa-2x mb-2"></i>
+                <h6>Status</h6>
+                <h5>{{ equipment.status|title }}</h5>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center {% if equipment.condition == 'excellent' %}bg-success{% elif equipment.condition == 'good' %}bg-primary{% elif equipment.condition == 'fair' %}bg-warning{% else %}bg-danger{% endif %} text-white">
+            <div class="card-body">
+                <i class="fas fa-star fa-2x mb-2"></i>
+                <h6>Condition</h6>
+                <h5>{{ equipment.condition|title }}</h5>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-rupee-sign fa-2x mb-2"></i>
+                <h6>Current Value</h6>
+                <h5>₹{{ equipment.current_value|floatformat:0 }}</h5>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center {% if equipment.is_warranty_valid %}bg-success{% else %}bg-secondary{% endif %} text-white">
+            <div class="card-body">
+                <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                <h6>Warranty</h6>
+                <h5>{% if equipment.is_warranty_valid %}{{ equipment.warranty_days_remaining }} Days{% else %}Expired{% endif %}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Equipment Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Equipment Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Name:</td>
+                                <td>{{ equipment.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Category:</td>
+                                <td>{{ equipment.category.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Brand:</td>
+                                <td>{{ equipment.brand }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Model:</td>
+                                <td>{{ equipment.model_number|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Serial Number:</td>
+                                <td><code>{{ equipment.serial_number }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Location:</td>
+                                <td>{{ equipment.location|default:"Not specified" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Purchase Date:</td>
+                                <td>{{ equipment.purchase_date }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Purchase Price:</td>
+                                <td>₹{{ equipment.purchase_price|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Current Value:</td>
+                                <td>₹{{ equipment.current_value|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Vendor:</td>
+                                <td>{{ equipment.vendor.name|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Invoice:</td>
+                                <td>{{ equipment.invoice_number|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Warranty Period:</td>
+                                <td>{{ equipment.warranty_period_months }} months</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if equipment.specifications %}
+                <div class="mt-3">
+                    <h6>Specifications:</h6>
+                    <p class="text-muted">{{ equipment.specifications }}</p>
+                </div>
+                {% endif %}
+                
+                {% if equipment.notes %}
+                <div class="mt-3">
+                    <h6>Notes:</h6>
+                    <p class="text-muted">{{ equipment.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Maintenance History -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>Maintenance History
+                </h5>
+                <a href="{% url 'inventory:schedule_equipment_maintenance' gym_id equipment.id %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-2"></i>Schedule Maintenance
+                </a>
+            </div>
+            <div class="card-body">
+                {% if maintenance_history %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Cost</th>
+                                <th>Technician</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for maintenance in maintenance_history %}
+                            <tr>
+                                <td>{{ maintenance.scheduled_date }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ maintenance.maintenance_type|title }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if maintenance.status == 'completed' %}success{% elif maintenance.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                        {{ maintenance.status|title }}
+                                    </span>
+                                </td>
+                                <td>₹{{ maintenance.total_cost|floatformat:2 }}</td>
+                                <td>{{ maintenance.technician_name|default:"N/A" }}</td>
+                                <td>
+                                    <a href="{% url 'inventory:update_maintenance' gym_id maintenance.id %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3 p-3 bg-light rounded">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <h6>Total Maintenance Cost</h6>
+                            <h4 class="text-primary">₹{{ total_maintenance_cost|floatformat:0 }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Total Maintenance Records</h6>
+                            <h4 class="text-info">{{ maintenance_history|length }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Last Maintenance</h6>
+                            <h4 class="text-success">{{ equipment.last_maintenance_date|default:"Never" }}</h4>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Maintenance Records</h5>
+                    <p class="text-muted">No maintenance has been performed on this equipment yet.</p>
+                    <a href="{% url 'inventory:schedule_equipment_maintenance' gym_id equipment.id %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Schedule First Maintenance
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Maintenance Alerts -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Alerts
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if equipment.needs_maintenance %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Maintenance Overdue!</strong><br>
+                    This equipment is {{ equipment.maintenance_overdue_days }} days overdue for maintenance.
+                </div>
+                {% endif %}
+                
+                {% if not equipment.is_warranty_valid %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Warranty Expired</strong><br>
+                    Warranty expired on {{ equipment.warranty_end_date }}.
+                </div>
+                {% elif equipment.warranty_days_remaining <= 30 %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warranty Expiring Soon!</strong><br>
+                    Only {{ equipment.warranty_days_remaining }} days remaining.
+                </div>
+                {% endif %}
+                
+                {% if equipment.status != 'working' %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Equipment Not Working</strong><br>
+                    Current status: {{ equipment.status|title }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:schedule_equipment_maintenance' gym_id equipment.id %}" class="btn btn-warning">
+                        <i class="fas fa-tools me-2"></i>Schedule Maintenance
+                    </a>
+                    <button class="btn btn-outline-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Equipment Info
+                    </button>
+                    <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>All Equipment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

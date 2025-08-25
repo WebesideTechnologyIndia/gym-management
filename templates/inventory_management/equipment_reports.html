@@ -1,0 +1,535 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Equipment Reports - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-chart-bar me-2"></i>Equipment Reports & Analytics</h2>
+        <p class="text-muted mb-0">Analyze equipment performance and costs</p>
+    </div>
+    <div>
+        <button class="btn btn-success me-2" onclick="exportReport('excel')">
+            <i class="fas fa-file-excel me-2"></i>Export Excel
+        </button>
+        <button class="btn btn-info me-2" onclick="exportReport('pdf')">
+            <i class="fas fa-file-pdf me-2"></i>Export PDF
+        </button>
+        <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-dumbbell fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ equipment_by_category|length }}</h3>
+                <small>Total Equipment</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-rupee-sign fa-2x mb-2"></i>
+                <h3 class="mb-1">₹{{ total_equipment_value|floatformat:0 }}</h3>
+                <small>Total Value</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-tools fa-2x mb-2"></i>
+                <h3 class="mb-1">₹{{ total_maintenance_cost|floatformat:0 }}</h3>
+                <small>Total Maintenance Cost</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-percentage fa-2x mb-2"></i>
+                <h3 class="mb-1">{{ average_age|floatformat:1 }}</h3>
+                <small>Avg Age (Years)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Equipment by Category Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Equipment by Category
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" width="400" height="300"></canvas>
+                
+                <!-- Category Table -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in equipment_by_category %}
+                            <tr>
+                                <td>{{ category.category__name }}</td>
+                                <td>{{ category.count }}</td>
+                                <td>{{ category.percentage|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Equipment by Status Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-doughnut me-2"></i>Equipment by Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" width="400" height="300"></canvas>
+                
+                <!-- Status Table -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for status in equipment_by_status %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{% if status.status == 'working' %}success{% elif status.status == 'maintenance' %}warning{% else %}danger{% endif %}">
+                                        {{ status.status|title }}
+                                    </span>
+                                </td>
+                                <td>{{ status.count }}</td>
+                                <td>{{ status.percentage|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Cost Trends -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Maintenance Cost Trends (Last 12 Months)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="maintenanceTrendChart" width="400" height="150"></canvas>
+                
+                <!-- Monthly Breakdown -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Maintenance Count</th>
+                                <th>Total Cost</th>
+                                <th>Average Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month_data in maintenance_costs %}
+                            <tr>
+                                <td>{{ month_data.month }}</td>
+                                <td>{{ month_data.count }}</td>
+                                <td>₹{{ month_data.cost|floatformat:2 }}</td>
+                                <td>₹{{ month_data.avg_cost|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Maintenance Equipment -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>Top Maintenance Equipment (Highest Costs)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Equipment</th>
+                                <th>Brand</th>
+                                <th>Maintenance Count</th>
+                                <th>Total Cost</th>
+                                <th>Avg Cost</th>
+                                <th>Last Maintenance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equipment in top_maintenance_equipment %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ equipment.name }}</strong><br>
+                                        <small class="text-muted">{{ equipment.serial_number }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ equipment.brand }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ equipment.maintenance_count }}</span>
+                                </td>
+                                <td>
+                                    <strong>₹{{ equipment.total_cost|floatformat:2 }}</strong>
+                                </td>
+                                <td>₹{{ equipment.avg_cost|floatformat:2 }}</td>
+                                <td>
+                                    {% if equipment.last_maintenance_date %}
+                                    {{ equipment.last_maintenance_date|date:"M d, Y" }}
+                                    {% else %}
+                                    <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Equipment Condition Analysis -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-star me-2"></i>Equipment Condition
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="conditionChart" width="300" height="300"></canvas>
+                
+                <div class="mt-3">
+                    {% for condition in equipment_by_condition %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-{% if condition.condition == 'excellent' %}success{% elif condition.condition == 'good' %}primary{% elif condition.condition == 'fair' %}warning{% else %}danger{% endif %}">
+                            {{ condition.condition|title }}
+                        </span>
+                        <span>{{ condition.count }} items</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Age Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar me-2"></i>Equipment Age Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <canvas id="ageDistributionChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Age Range</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                        <th>Avg Maintenance Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>0-1 Years</td>
+                                        <td>{{ age_analysis.new_count }}</td>
+                                        <td>{{ age_analysis.new_percentage|floatformat:1 }}%</td>
+                                        <td>₹{{ age_analysis.new_avg_cost|floatformat:0 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1-3 Years</td>
+                                        <td>{{ age_analysis.medium_count }}</td>
+                                        <td>{{ age_analysis.medium_percentage|floatformat:1 }}%</td>
+                                        <td>₹{{ age_analysis.medium_avg_cost|floatformat:0 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3-5 Years</td>
+                                        <td>{{ age_analysis.old_count }}</td>
+                                        <td>{{ age_analysis.old_percentage|floatformat:1 }}%</td>
+                                        <td>₹{{ age_analysis.old_avg_cost|floatformat:0 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>5+ Years</td>
+                                        <td>{{ age_analysis.very_old_count }}</td>
+                                        <td>{{ age_analysis.very_old_percentage|floatformat:1 }}%</td>
+                                        <td>₹{{ age_analysis.very_old_avg_cost|floatformat:0 }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Recommendations & Insights
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i>Action Required</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-circle text-danger me-2" style="font-size: 8px;"></i>{{ overdue_maintenance }} equipment overdue for maintenance</li>
+                            <li><i class="fas fa-circle text-warning me-2" style="font-size: 8px;"></i>{{ warranty_expiring }} warranties expiring within 30 days</li>
+                            <li><i class="fas fa-circle text-info me-2" style="font-size: 8px;"></i>{{ high_maintenance_cost }} equipment with high maintenance costs</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-line text-success me-2"></i>Performance Insights</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-circle text-success me-2" style="font-size: 8px;"></i>{{ working_percentage|floatformat:1 }}% equipment in working condition</li>
+                            <li><i class="fas fa-circle text-primary me-2" style="font-size: 8px;"></i>Average equipment age: {{ average_age|floatformat:1 }} years</li>
+                            <li><i class="fas fa-circle text-info me-2" style="font-size: 8px;"></i>Monthly maintenance cost: ₹{{ monthly_avg_cost|floatformat:0 }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<script>
+// Chart Colors
+const chartColors = {
+    primary: '#007bff',
+    success: '#28a745',
+    warning: '#ffc107',
+    danger: '#dc3545',
+    info: '#17a2b8',
+    secondary: '#6c757d'
+};
+
+// Equipment by Category Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: [{% for category in equipment_by_category %}'{{ category.category__name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for category in equipment_by_category %}{{ category.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                chartColors.primary,
+                chartColors.success,
+                chartColors.warning,
+                chartColors.danger,
+                chartColors.info,
+                chartColors.secondary
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Equipment by Status Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for status in equipment_by_status %}'{{ status.status|title }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for status in equipment_by_status %}{{ status.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                chartColors.success,
+                chartColors.warning,
+                chartColors.danger,
+                chartColors.secondary
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Maintenance Trend Chart
+const trendCtx = document.getElementById('maintenanceTrendChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for month_data in maintenance_costs %}'{{ month_data.month }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Maintenance Cost (₹)',
+            data: [{% for month_data in maintenance_costs %}{{ month_data.cost }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: chartColors.warning,
+            backgroundColor: chartColors.warning + '20',
+            tension: 0.1,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '₹' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Condition Chart
+const conditionCtx = document.getElementById('conditionChart').getContext('2d');
+new Chart(conditionCtx, {
+    type: 'radar',
+    data: {
+        labels: [{% for condition in equipment_by_condition %}'{{ condition.condition|title }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for condition in equipment_by_condition %}{{ condition.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: chartColors.info + '30',
+            borderColor: chartColors.info,
+            pointBackgroundColor: chartColors.info
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Age Distribution Chart
+const ageCtx = document.getElementById('ageDistributionChart').getContext('2d');
+new Chart(ageCtx, {
+    type: 'bar',
+    data: {
+        labels: ['0-1 Years', '1-3 Years', '3-5 Years', '5+ Years'],
+        datasets: [{
+            label: 'Equipment Count',
+            data: [
+                {{ age_analysis.new_count }},
+                {{ age_analysis.medium_count }},
+                {{ age_analysis.old_count }},
+                {{ age_analysis.very_old_count }}
+            ],
+            backgroundColor: [
+                chartColors.success,
+                chartColors.primary,
+                chartColors.warning,
+                chartColors.danger
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Export Functions
+function exportReport(format) {
+    if (format === 'excel') {
+        alert('Excel export feature coming soon!');
+    } else if (format === 'pdf') {
+        window.print();
+    }
+}
+</script>
+
+<style>
+@media print {
+    .btn, .card-header .btn-group {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

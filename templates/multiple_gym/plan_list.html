@@ -1,0 +1,80 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+
+
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- In your plan_list.html or base.html template -->
+<h2>Membership Plans</h2>
+<div>
+    {% if user.user_type == 'gymadmin' and gym_id %}
+        <a href="{% url 'membership_list_gym' gym_id %}" class="btn btn-outline-info me-2">View Memberships</a>
+    {% else %}
+        <a href="{% url 'membership_list' %}" class="btn btn-outline-info me-2">View Memberships</a>
+    {% endif %}
+    <a href="{% url 'create_plan' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add New Plan
+    </a>
+</div>
+
+<!-- For navigation menu in base.html -->
+<li class="nav-item">
+    {% if user.user_type == 'gymadmin' and gym_id %}
+        <a class="nav-link text-white" href="{% url 'membership_list_gym' gym_id %}">
+            <i class="fas fa-users me-2"></i>View Memberships
+        </a>
+    {% else %}
+        <a class="nav-link text-white" href="{% url 'membership_list' %}">
+            <i class="fas fa-users me-2"></i>View Memberships
+        </a>
+    {% endif %}
+</li>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="row">
+        {% for plan in plans %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ plan.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h4 class="text-primary">₹{{ plan.price }}</h4>
+                        <p class="text-muted">{{ plan.duration_months }} month{{ plan.duration_months|pluralize }}</p>
+                    </div>
+                    {% if plan.description %}
+                        <p class="card-text">{{ plan.description }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'plan_detail' plan.pk %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                    <a href="{% url 'create_membership' %}" class="btn btn-success btn-sm float-end">Use This Plan</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center">
+                <h4>No plans available</h4>
+                <p>Start by creating your first membership plan!</p>
+                <a href="{% url 'create_plan' %}" class="btn btn-primary">Create First Plan</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,476 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Alerts & Notifications - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-exclamation-triangle me-2"></i>Alerts & Notifications</h2>
+        <p class="text-muted mb-0">Monitor important alerts and system notifications</p>
+    </div>
+    <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Alert Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Priority</label>
+                <select name="priority" class="form-select">
+                    <option value="">All Priorities</option>
+                    <option value="critical" {% if priority_filter == 'critical' %}selected{% endif %}>Critical</option>
+                    <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Alert Type</label>
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="low_stock" {% if type_filter == 'low_stock' %}selected{% endif %}>Low Stock</option>
+                    <option value="maintenance_due" {% if type_filter == 'maintenance_due' %}selected{% endif %}>Maintenance Due</option>
+                    <option value="warranty_expiring" {% if type_filter == 'warranty_expiring' %}selected{% endif %}>Warranty Expiring</option>
+                    <option value="expiry_soon" {% if type_filter == 'expiry_soon' %}selected{% endif %}>Expiring Soon</option>
+                    <option value="reorder_needed" {% if type_filter == 'reorder_needed' %}selected{% endif %}>Reorder Needed</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Alert Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-danger text-white">
+            <div class="card-body">
+                <h3 class="mb-1">{{ critical_count|default:0 }}</h3>
+                <small>Critical Alerts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <h3 class="mb-1">{{ high_count|default:0 }}</h3>
+                <small>High Priority</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <h3 class="mb-1">{{ alerts|length }}</h3>
+                <small>Total Alerts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <h3 class="mb-1">{{ resolved_today|default:0 }}</h3>
+                <small>Resolved Today</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-bell me-2"></i>Active Alerts
+        </h5>
+        {% if alerts %}
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" onclick="markAllAsRead()" title="Mark all as read">
+                <i class="fas fa-check me-1"></i>Mark All Read
+            </button>
+            <button class="btn btn-outline-success" onclick="resolveAll()" title="Resolve all alerts">
+                <i class="fas fa-check-double me-1"></i>Resolve All
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if alerts %}
+        <div class="list-group list-group-flush">
+            {% for alert in alerts %}
+            <div id="alert-{{ alert.id }}" class="list-group-item border-start border-5 border-{% if alert.priority == 'critical' %}danger{% elif alert.priority == 'high' %}warning{% elif alert.priority == 'medium' %}info{% else %}secondary{% endif %} {% if not alert.is_read %}bg-light{% endif %}">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas {% if alert.alert_type == 'low_stock' %}fa-box{% elif alert.alert_type == 'maintenance_due' %}fa-tools{% elif alert.alert_type == 'warranty_expiring' %}fa-shield-alt{% elif alert.alert_type == 'expiry_soon' %}fa-calendar-times{% else %}fa-exclamation-triangle{% endif %} me-2 text-{% if alert.priority == 'critical' %}danger{% elif alert.priority == 'high' %}warning{% else %}info{% endif %}"></i>
+                            <h6 class="mb-0">{{ alert.title }}</h6>
+                            <span class="badge bg-{% if alert.priority == 'critical' %}danger{% elif alert.priority == 'high' %}warning{% elif alert.priority == 'medium' %}info{% else %}secondary{% endif %} ms-2">
+                                {{ alert.priority|title }}
+                            </span>
+                            <span class="badge bg-primary ms-1">
+                                {% if alert.alert_type == 'low_stock' %}Low Stock
+                                {% elif alert.alert_type == 'maintenance_due' %}Maintenance Due
+                                {% elif alert.alert_type == 'warranty_expiring' %}Warranty Expiring
+                                {% elif alert.alert_type == 'expiry_soon' %}Expiring Soon
+                                {% elif alert.alert_type == 'reorder_needed' %}Reorder Needed
+                                {% else %}{{ alert.alert_type|title }}{% endif %}
+                            </span>
+                            {% if not alert.is_read %}
+                            <span class="badge bg-info ms-1">New</span>
+                            {% endif %}
+                        </div>
+                        <p class="mb-2 text-muted">{{ alert.message }}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>{{ alert.created_at|timesince }} ago
+                            {% if alert.equipment %}
+                            | <i class="fas fa-dumbbell me-1"></i>Equipment: {{ alert.equipment.name }}
+                            {% endif %}
+                            {% if alert.inventory_item %}
+                            | <i class="fas fa-box me-1"></i>Item: {{ alert.inventory_item.name }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="btn-group btn-group-sm ms-3" role="group">
+                        {% if not alert.is_read %}
+                        <button class="btn btn-outline-primary" onclick="markAsRead({{ alert.id|default:'null' }})" title="Mark as Read">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-outline-success" onclick="resolveAlert({{ alert.id|default:'null' }})" title="Resolve Alert">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        {% if alert.equipment and alert.equipment.id %}
+                        <a href="{% url 'inventory:equipment_detail' gym_id alert.equipment.id %}" class="btn btn-outline-info" title="View Equipment">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        {% endif %}
+                        {% if alert.inventory_item and alert.inventory_item.id %}
+                        <a href="{% url 'inventory:inventory_detail' gym_id alert.inventory_item.id %}" class="btn btn-outline-info" title="View Item">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h5 class="text-success">No Active Alerts</h5>
+            <p class="text-muted">All systems are running smoothly! No alerts to display.</p>
+            <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-primary">
+                <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Alert Types Info -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Alert Types & Priorities
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Alert Types:</h6>
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-box text-warning fa-lg me-2"></i>
+                                    <div>
+                                        <strong>Low Stock</strong>
+                                        <br><small class="text-muted">Items below minimum level</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-tools text-danger fa-lg me-2"></i>
+                                    <div>
+                                        <strong>Maintenance Due</strong>
+                                        <br><small class="text-muted">Equipment needs service</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-shield-alt text-info fa-lg me-2"></i>
+                                    <div>
+                                        <strong>Warranty Expiring</strong>
+                                        <br><small class="text-muted">Equipment warranty ending</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-calendar-times text-success fa-lg me-2"></i>
+                                    <div>
+                                        <strong>Expiry Soon</strong>
+                                        <br><small class="text-muted">Items expiring soon</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Priority Levels:</h6>
+                        <div class="mb-3">
+                            <span class="badge bg-danger me-2">Critical</span> 
+                            <small>Immediate attention required</small>
+                        </div>
+                        <div class="mb-3">
+                            <span class="badge bg-warning me-2">High</span> 
+                            <small>Action needed within 24 hours</small>
+                        </div>
+                        <div class="mb-3">
+                            <span class="badge bg-info me-2">Medium</span> 
+                            <small>Action needed within a week</small>
+                        </div>
+                        <div class="mb-3">
+                            <span class="badge bg-secondary me-2">Low</span> 
+                            <small>Monitor and plan action</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+
+<script>
+// Get CSRF token
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Show loading state
+function showLoading(button) {
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    return originalContent;
+}
+
+// Restore button state
+function restoreButton(button, originalContent) {
+    button.innerHTML = originalContent;
+    button.disabled = false;
+}
+
+// Mark individual alert as read
+function markAsRead(alertId) {
+    // Check if alertId is valid
+    if (!alertId || alertId === 'null') {
+        console.error('Invalid alert ID:', alertId);
+        showToast('Error: Invalid alert ID', 'error');
+        return;
+    }
+    
+    const button = event.target.closest('button');
+    const originalContent = showLoading(button);
+    
+    // Updated URL pattern - using the correct URL structure
+    fetch(`{% url 'inventory:mark_alert_as_read' gym_id=gym_id alert_id=0 %}`.replace('0', alertId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the "New" badge and "Mark as Read" button
+            const alertElement = document.getElementById(`alert-${alertId}`);
+            if (alertElement) {
+                const newBadge = alertElement.querySelector('.badge.bg-info');
+                if (newBadge && newBadge.textContent === 'New') {
+                    newBadge.remove();
+                }
+                
+                // Remove the "Mark as Read" button
+                button.remove();
+                
+                // Remove the light background
+                alertElement.classList.remove('bg-light');
+            }
+            
+            // Show success message
+            showToast('Alert marked as read', 'success');
+        } else {
+            restoreButton(button, originalContent);
+            showToast('Error marking alert as read: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        restoreButton(button, originalContent);
+        console.error('Error:', error);
+        showToast('Network error occurred', 'error');
+    });
+}
+
+// Resolve individual alert
+function resolveAlert(alertId) {
+    // Check if alertId is valid
+    if (!alertId || alertId === 'null') {
+        console.error('Invalid alert ID:', alertId);
+        showToast('Error: Invalid alert ID', 'error');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to resolve this alert?')) {
+        // Redirect to resolve URL using the correct URL pattern
+        window.location.href = `{% url 'inventory:resolve_alert' gym_id=gym_id alert_id=0 %}`.replace('0', alertId);
+    }
+}
+
+// Mark all alerts as read
+function markAllAsRead() {
+    if (confirm('Mark all alerts as read?')) {
+        const button = event.target.closest('button');
+        const originalContent = showLoading(button);
+        
+        fetch(`{% url 'inventory:mark_all_alerts_as_read' gym_id=gym_id %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                restoreButton(button, originalContent);
+                showToast('Error marking all alerts as read: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            restoreButton(button, originalContent);
+            console.error('Error:', error);
+            showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+// Resolve all alerts
+function resolveAll() {
+    if (confirm('Are you sure you want to resolve all alerts? This action cannot be undone.')) {
+        const button = event.target.closest('button');
+        const originalContent = showLoading(button);
+        
+        fetch(`{% url 'inventory:resolve_all_alerts' gym_id=gym_id %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                restoreButton(button, originalContent);
+                showToast('Error resolving all alerts: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            restoreButton(button, originalContent);
+            console.error('Error:', error);
+            showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Get or create toast container
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        toastContainer.style.zIndex = '1055';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Add toast to container
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Show the toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Remove toast after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+// Debug function to check alert IDs
+function debugAlerts() {
+    console.log('Debugging alert IDs:');
+    {% for alert in alerts %}
+    console.log('Alert {{ forloop.counter }}: ID = {{ alert.id|default:"None" }}, Title = "{{ alert.title|escapejs }}"');
+    {% endfor %}
+}
+
+// Call debug function when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    debugAlerts();
+});
+
+// Auto-refresh alerts every 5 minutes
+setInterval(function() {
+    if (document.getElementById('auto-refresh-checkbox')?.checked) {
+        location.reload();
+    }
+}, 300000); // 5 minutes
+</script>
+
+<!-- Auto-refresh option -->
+<div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1050;">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="auto-refresh-checkbox">
+        <label class="form-check-label small text-muted" for="auto-refresh-checkbox">
+            Auto-refresh (5 min)
+        </label>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,280 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Add Inventory Item - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-plus me-2"></i>Add New Inventory Item</h2>
+        <p class="text-muted mb-0">Add stock item to {{ gym.name }}</p>
+    </div>
+    <a href="{% url 'inventory:inventory_list' gym_id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Inventory
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-box me-2"></i>Item Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Basic Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Item Name *</label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g., Whey Protein Powder"
+                                required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category *</label>
+                            <select name="category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Brand</label>
+                            <input type="text" name="brand" class="form-control" placeholder="e.g., Optimum Nutrition">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">SKU/Product Code</label>
+                            <input type="text" name="sku" class="form-control" placeholder="e.g., WPP-001">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3"
+                                placeholder="Item description and details"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Stock Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Stock Information</h6>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Current Stock *</label>
+                            <input type="number" name="current_stock" class="form-control" step="0.01" min="0" value="0"
+                                required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Minimum Stock *</label>
+                            <input type="number" name="minimum_stock" class="form-control" step="0.01" min="0" value="0"
+                                required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Maximum Stock *</label>
+                            <input type="number" name="maximum_stock" class="form-control" step="0.01" min="0"
+                                value="100" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unit *</label>
+                            <select name="unit" class="form-select" required>
+                                <option value="piece">Piece</option>
+                                <option value="kg">Kilogram</option>
+                                <option value="liter">Liter</option>
+                                <option value="packet">Packet</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="box">Box</option>
+                                <option value="meter">Meter</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Storage Location</label>
+                            <input type="text" name="location" class="form-control"
+                                placeholder="e.g., Store Room - Shelf A">
+                        </div>
+                    </div>
+
+                    <!-- Pricing Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Pricing Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cost Price (₹) *</label>
+                            <input type="number" name="cost_price" class="form-control" step="0.01" min="0"
+                                placeholder="e.g., 2500" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Selling Price (₹)</label>
+                            <input type="number" name="selling_price" class="form-control" step="0.01" min="0"
+                                placeholder="e.g., 3000">
+                        </div>
+                    </div>
+
+                    <!-- Vendor & Reorder -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Vendor & Reorder Settings</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Primary Vendor</label>
+                            <select name="vendor" class="form-select">
+                                <option value="">Select Vendor</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Reorder Quantity</label>
+                            <input type="number" name="reorder_quantity" class="form-control" step="0.01" min="0"
+                                value="0">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="auto_reorder" id="auto_reorder">
+                                <label class="form-check-label" for="auto_reorder">
+                                    Enable Auto Reorder Alert
+                                </label>
+                                <div class="form-text">System will alert when stock falls below minimum level</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expiry Settings -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Expiry Settings</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="has_expiry" id="has_expiry">
+                                <label class="form-check-label" for="has_expiry">
+                                    Item has expiry date
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expiry Alert Days</label>
+                            <input type="number" name="expiry_alert_days" class="form-control" min="1" max="365"
+                                value="30" disabled id="expiry_days">
+                            <div class="form-text">Alert X days before expiry</div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'inventory:inventory_list' gym_id %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Add Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Tips & Guidelines
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>Stock Levels</h6>
+                    <small class="text-muted">
+                        Set minimum stock to trigger reorder alerts. Maximum stock helps plan storage space.
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>SKU/Product Code</h6>
+                    <small class="text-muted">
+                        Use a consistent naming convention for easy identification and tracking.
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>Pricing</h6>
+                    <small class="text-muted">
+                        Cost price is used for inventory valuation. Selling price is optional for retail items.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:add_vendor' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-plus me-2"></i>Add New Vendor
+                    </a>
+                    <a href="{% url 'inventory:inventory_list' gym_id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-list me-2"></i>View All Items
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Enable/disable expiry alert days based on has_expiry checkbox
+        const hasExpiryCheckbox = document.getElementById('has_expiry');
+        const expiryDaysInput = document.getElementById('expiry_days');
+
+        hasExpiryCheckbox.addEventListener('change', function () {
+            expiryDaysInput.disabled = !this.checked;
+            if (!this.checked) {
+                expiryDaysInput.value = 30;
+            }
+        });
+
+        // Auto-calculate selling price based on cost price (suggested markup)
+        const costPriceInput = document.querySelector('input[name="cost_price"]');
+        const sellingPriceInput = document.querySelector('input[name="selling_price"]');
+
+        costPriceInput.addEventListener('blur', function () {
+            if (this.value && !sellingPriceInput.value) {
+                // Suggest 20% markup
+                const markup = parseFloat(this.value) * 1.2;
+                sellingPriceInput.value = markup.toFixed(2);
+            }
+        });
+
+        // Validate minimum < maximum stock
+        const minStockInput = document.querySelector('input[name="minimum_stock"]');
+        const maxStockInput = document.querySelector('input[name="maximum_stock"]');
+
+        function validateStockLevels() {
+            const minStock = parseFloat(minStockInput.value) || 0;
+            const maxStock = parseFloat(maxStockInput.value) || 0;
+
+            if (minStock >= maxStock && maxStock > 0) {
+                maxStockInput.setCustomValidity('Maximum stock must be greater than minimum stock');
+            } else {
+                maxStockInput.setCustomValidity('');
+            }
+        }
+
+        minStockInput.addEventListener('change', validateStockLevels);
+        maxStockInput.addEventListener('change', validateStockLevels);
+    });
+</script>
+{% endblock %}

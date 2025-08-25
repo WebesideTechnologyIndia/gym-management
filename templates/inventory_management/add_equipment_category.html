@@ -1,0 +1,257 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Add Equipment Category - Gym Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-plus-circle me-2"></i>Add Equipment Category</h2>
+        <p class="text-muted mb-0">Create new equipment category for organization</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:equipment_category_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-list me-2"></i>View Categories
+        </a>
+        <a href="{% url 'inventory:dashboard' gym_id=1 %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tag me-2"></i>Category Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Basic Information</h6>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category Name *</label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g., Cardio Equipment" required>
+                            <div class="form-text">Enter a descriptive name for the category</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Icon (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-icons"></i></span>
+                                <input type="text" name="icon" class="form-control" placeholder="fa-dumbbell" id="iconInput">
+                            </div>
+                            <div class="form-text">Font Awesome icon class (e.g., fa-dumbbell, fa-bicycle)</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Brief description of this equipment category..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Icon Preview -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Icon Preview</h6>
+                            <div class="p-3 bg-light rounded text-center">
+                                <i id="iconPreview" class="fas fa-tag fa-3x text-muted"></i>
+                                <div class="mt-2">
+                                    <small class="text-muted">Icon preview will appear here</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Common Icons -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Common Icons</h6>
+                            <div class="row">
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-dumbbell">
+                                        <i class="fas fa-dumbbell me-2"></i>Strength
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-heartbeat">
+                                        <i class="fas fa-heartbeat me-2"></i>Cardio
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-bicycle">
+                                        <i class="fas fa-bicycle me-2"></i>Bikes
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-running">
+                                        <i class="fas fa-running me-2"></i>Treadmill
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-weight-hanging">
+                                        <i class="fas fa-weight-hanging me-2"></i>Free Weights
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-swimmer">
+                                        <i class="fas fa-swimmer me-2"></i>Pool Equipment
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-spa">
+                                        <i class="fas fa-spa me-2"></i>Yoga/Pilates
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary w-100 icon-btn" data-icon="fa-cogs">
+                                        <i class="fas fa-cogs me-2"></i>Machines
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'inventory:equipment_category_list' %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Existing Categories -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Existing Categories
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if existing_categories %}
+                    {% for category in existing_categories %}
+                    <div class="d-flex align-items-center mb-2 p-2 bg-light rounded">
+                        {% if category.icon %}
+                        <i class="fas {{ category.icon }} text-primary me-2"></i>
+                        {% else %}
+                        <i class="fas fa-tag text-muted me-2"></i>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ category.name }}</div>
+                            <small class="text-muted">{{ category.equipment.count }} equipment</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'inventory:equipment_category_list' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-2"></i>View All Categories
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-tag fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No categories created yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-check text-success me-2"></i>Best Practices</h6>
+                    <small class="text-muted">
+                        • Use clear, descriptive names<br>
+                        • Group similar equipment together<br>
+                        • Choose relevant icons for easy identification
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-info text-info me-2"></i>Examples</h6>
+                    <small class="text-muted">
+                        • Cardio Equipment<br>
+                        • Strength Training<br>
+                        • Free Weights<br>
+                        • Yoga & Pilates
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const iconInput = document.getElementById('iconInput');
+    const iconPreview = document.getElementById('iconPreview');
+    const iconButtons = document.querySelectorAll('.icon-btn');
+    
+    // Icon preview on input
+    iconInput.addEventListener('input', function() {
+        const iconClass = this.value.trim();
+        if (iconClass) {
+            iconPreview.className = `fas ${iconClass} fa-3x text-primary`;
+        } else {
+            iconPreview.className = 'fas fa-tag fa-3x text-muted';
+        }
+    });
+    
+    // Icon button clicks
+    iconButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const icon = this.getAttribute('data-icon');
+            iconInput.value = icon;
+            iconPreview.className = `fas ${icon} fa-3x text-primary`;
+            
+            // Remove active class from all buttons
+            iconButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+        });
+    });
+});
+</script>
+
+<style>
+.icon-btn {
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.icon-btn.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+#iconPreview {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}
