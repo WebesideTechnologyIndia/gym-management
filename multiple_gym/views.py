@@ -372,85 +372,100 @@ def gym_detail(request, gym_id):
     return render(request, "multiple_gym/gym_detail.html", context)
 
 
+
+
 @login_required
 def member_dashboard(request):
-    print(f"=== MEMBER DASHBOARD DEBUG ===")
-    print(f"User authenticated: {request.user.is_authenticated}")
-    print(f"User: {request.user}")
-    print(f"User type: {getattr(request.user, 'user_type', 'NO USER_TYPE')}")
-    print(f"Request path: {request.path}")
-
     if request.user.user_type != "member":
-        print(f"Access denied for user type: {request.user.user_type}")
         messages.error(request, "Access denied!")
         return redirect("login")
 
     try:
-        print("Looking for Member object...")
         member = Member.objects.get(user=request.user)
-        print(f"Member found: {member}")
-        print(f"Member gym: {member.gym}")
+        
+        # Get ALL memberships
+        all_memberships = Membership.objects.filter(member_name=member).order_by("-start_date")
+        
+        print(f"Debug - Total memberships: {all_memberships.count()}")
+        
+        # Debug each membership
+        for mem in all_memberships:
+            print(f"Membership: {mem.plan.name}")
+            print(f"Start: {mem.start_date}, End: {mem.end_date}")
+            print(f"Status: {mem.membership_status}, Active: {mem.is_active}")
+            print("---")
 
-        # Get active membership
-        active_membership = Membership.objects.filter(
-            member_name=member, is_active=True
+        # Get active membership - SIMPLE approach
+        from datetime import date
+        today = date.today()
+        
+        # Method 1: Find by date range (most reliable)
+        active_membership = all_memberships.filter(
+            start_date__lte=today,
+            end_date__gte=today
         ).first()
-
-        # Get all memberships for history
-        all_memberships = Membership.objects.filter(member_name=member).order_by(
-            "-start_date"
-        )
-
-        # Calculate days remaining
-        days_remaining = 0
-        membership_status = "No Active Membership"
-
+        
+        print(f"Active membership found: {active_membership}")
+        
+        # If found, update its status
         if active_membership:
-            days_remaining = (active_membership.end_date - timezone.now().date()).days
-            days_remaining = max(0, days_remaining)
+            active_membership.membership_status = 'active'
+            active_membership.is_active = True
+            active_membership.save()
+            
+            days_remaining = (active_membership.end_date - today).days
+            membership_status = "Active"
+        else:
+            days_remaining = 0
+            membership_status = "No Active Membership"
 
-            if days_remaining > 0:
-                membership_status = "Active"
-            else:
-                membership_status = "Expired"
+        # Calculate payments
+        from decimal import Decimal
+        
+        # Get payments from Payment model
+        all_payments = Payment.objects.filter(membership__member_name=member)
+        total_paid = sum(p.amount for p in all_payments) if all_payments.exists() else Decimal('0')
+        
+        # Calculate due amount
+        total_due = sum(m.remaining_amount for m in all_memberships)
 
-        # Calculate total payments (assuming payment model exists)
-        # For now using plan price as payment amount
-        total_paid = sum(m.plan.price for m in all_memberships)
+        # Recent payments
+        recent_payments = all_payments.order_by('-payment_date')[:5]
 
-        # Get membership stats
+        # Stats
         total_memberships = all_memberships.count()
-        expired_memberships = all_memberships.filter(
-            end_date__lt=timezone.now().date()
-        ).count()
+        expired_memberships = all_memberships.filter(end_date__lt=today).count()
+        active_memberships = 1 if active_membership else 0
+
+        # Payment percentage
+        payment_percentage = 0
+        if active_membership and active_membership.total_amount > 0:
+            payment_percentage = (active_membership.paid_amount / active_membership.total_amount) * 100
 
         context = {
             "member": member,
             "gym": member.gym,
             "active_membership": active_membership,
             "all_memberships": all_memberships,
+            "recent_payments": recent_payments,
             "days_remaining": days_remaining,
             "membership_status": membership_status,
             "total_paid": total_paid,
+            "total_due": total_due,
+            "payment_percentage": payment_percentage,
             "total_memberships": total_memberships,
             "expired_memberships": expired_memberships,
+            "active_memberships": active_memberships,
         }
-        print("Rendering member dashboard template...")
+        
         return render(request, "multiple_gym/member_dashboard.html", context)
 
-    except Member.DoesNotExist:
-        print("Member object not found! Logging out user...")
-        logout(request)
-        messages.error(
-            request,
-            "Member profile not found! Please contact admin to setup your membership.",
-        )
-        print("User logged out, redirecting to login")
-        return redirect("login")
     except Exception as e:
-        print(f"Error in member dashboard: {e}")
+        print(f"Error: {e}")
         messages.error(request, f"Error: {str(e)}")
         return redirect("login")
+
+
 
 
 # MEMBERSHIP PLAN VIEWS

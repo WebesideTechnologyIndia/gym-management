@@ -82,16 +82,13 @@
             transition: transform 0.3s ease;
         }
 
-        .collapse-toggle.collapsed::after {
+        .collapse-toggle.collapsed .collapse-icon {
             transform: rotate(-90deg);
         }
 
-        .collapse-toggle::after {
-            content: '\f078';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            float: right;
+        .collapse-icon {
             transition: transform 0.3s ease;
+            float: right;
         }
 
         /* Equipment submenu styles */
@@ -106,6 +103,15 @@
             font-size: 0.8rem;
             padding: 6px 10px;
             color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Keep submenu open */
+        .submenu.show {
+            display: block !important;
+        }
+
+        .equipment-submenu.show {
+            display: block !important;
         }
     </style>
 </head>
@@ -174,8 +180,9 @@
 
                         <!-- Member Management -->
                         <li class="nav-item">
-                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#memberSubmenu" role="button">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#memberSubmenu" role="button" aria-expanded="false" aria-controls="memberSubmenu">
                                 <i class="fas fa-users me-2"></i>Member Management
+                                <i class="fas fa-chevron-down collapse-icon"></i>
                             </a>
                             <div class="collapse submenu" id="memberSubmenu">
                                 <ul class="nav flex-column">
@@ -205,8 +212,9 @@
 
                         <!-- Inventory Management -->
                         <li class="nav-item">
-                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#inventorySubmenu" role="button">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#inventorySubmenu" role="button" aria-expanded="false" aria-controls="inventorySubmenu">
                                 <i class="fas fa-boxes me-2"></i>Inventory Management
+                                <i class="fas fa-chevron-down collapse-icon"></i>
                             </a>
                             <div class="collapse submenu" id="inventorySubmenu">
                                 <ul class="nav flex-column">
@@ -219,8 +227,9 @@
 
                                     <!-- Equipment Section -->
                                     <li class="nav-item">
-                                        <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#equipmentSubmenu" role="button">
+                                        <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#equipmentSubmenu" role="button" aria-expanded="false" aria-controls="equipmentSubmenu">
                                             <i class="fas fa-dumbbell me-2"></i>Equipment
+                                            <i class="fas fa-chevron-down collapse-icon"></i>
                                         </a>
                                         <div class="collapse equipment-submenu" id="equipmentSubmenu">
                                             <ul class="nav flex-column">
@@ -240,9 +249,8 @@
                                                     </a>
                                                 </li>
                                                 <li class="nav-item">
-                                                    <a class="nav-link text-white" href="{% url 'inventory:add_equipment_category' %}">
-                                                        <i class="fas fa-plus-circle me-2"></i>Add Category
-                                                    </a>
+                                                   <a class="nav-link text-white"  href="{% url 'inventory:add_equipment_category' gym_id=gym_id %}"> <i class="fas fa-tags me-2"></i>Add Category</a>
+
                                                 </li>
                                             </ul>
                                         </div>
@@ -250,8 +258,9 @@
 
                                     <!-- Maintenance Section -->
                                     <li class="nav-item">
-                                        <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#maintenanceSubmenu" role="button">
+                                        <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#maintenanceSubmenu" role="button" aria-expanded="false" aria-controls="maintenanceSubmenu">
                                             <i class="fas fa-tools me-2"></i>Maintenance
+                                            <i class="fas fa-chevron-down collapse-icon"></i>
                                         </a>
                                         <div class="collapse equipment-submenu" id="maintenanceSubmenu">
                                             <ul class="nav flex-column">
@@ -278,7 +287,7 @@
 
                                     <!-- Vendors -->
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'inventory:vendor_list' %}">
+                                        <a class="nav-link text-white" href="{% url 'inventory:vendor_list' gym_id%}">
                                             <i class="fas fa-truck me-2"></i>Vendors
                                         </a>
                                     </li>
@@ -295,8 +304,9 @@
 
                         <!-- Plans Management -->
                         <li class="nav-item">
-                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#plansSubmenu" role="button">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#plansSubmenu" role="button" aria-expanded="false" aria-controls="plansSubmenu">
                                 <i class="fas fa-clipboard-list me-2"></i>Plans Management
+                                <i class="fas fa-chevron-down collapse-icon"></i>
                             </a>
                             <div class="collapse submenu" id="plansSubmenu">
                                 <ul class="nav flex-column">
@@ -316,8 +326,9 @@
 
                         <!-- Reports -->
                         <li class="nav-item">
-                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#reportsSubmenu" role="button">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#reportsSubmenu" role="button" aria-expanded="false" aria-controls="reportsSubmenu">
                                 <i class="fas fa-chart-bar me-2"></i>Reports
+                                <i class="fas fa-chevron-down collapse-icon"></i>
                             </a>
                             <div class="collapse submenu" id="reportsSubmenu">
                                 <ul class="nav flex-column">
@@ -378,65 +389,142 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
     <script>
-    // Auto-expand submenu based on current page
+    // Enhanced navigation state management
     document.addEventListener('DOMContentLoaded', function() {
         const currentPath = window.location.pathname;
         
-        // Check if current page is in inventory section
+        // Function to expand submenu and update toggle state
+        function expandSubmenu(submenuId, toggleSelector) {
+            const submenu = document.getElementById(submenuId);
+            const toggle = document.querySelector(toggleSelector);
+            
+            if (submenu && toggle) {
+                submenu.classList.add('show');
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.classList.remove('collapsed');
+            }
+        }
+        
+        // Function to highlight active nav link
+        function setActiveLink(selector) {
+            const link = document.querySelector(selector);
+            if (link) {
+                link.classList.add('active');
+            }
+        }
+        
+        // Check current path and expand relevant menus
+        
+        // Dashboard
+        if (currentPath.includes('/dashboard/')) {
+            setActiveLink('a[href*="dashboard"]');
+        }
+        
+        // Inventory Management
         if (currentPath.includes('/inventory/')) {
-            const inventorySubmenu = document.getElementById('inventorySubmenu');
-            if (inventorySubmenu) {
-                inventorySubmenu.classList.add('show');
-            }
-
-            // Auto-expand equipment submenu for equipment-related pages
+            expandSubmenu('inventorySubmenu', 'a[href="#inventorySubmenu"]');
+            
+            // Equipment related pages
             if (currentPath.includes('/equipment/') || currentPath.includes('/category/')) {
-                const equipmentSubmenu = document.getElementById('equipmentSubmenu');
-                if (equipmentSubmenu) {
-                    equipmentSubmenu.classList.add('show');
-                }
+                expandSubmenu('equipmentSubmenu', 'a[href="#equipmentSubmenu"]');
             }
-
-            // Auto-expand maintenance submenu for maintenance-related pages
+            
+            // Maintenance related pages
             if (currentPath.includes('/maintenance/')) {
-                const maintenanceSubmenu = document.getElementById('maintenanceSubmenu');
-                if (maintenanceSubmenu) {
-                    maintenanceSubmenu.classList.add('show');
-                }
+                expandSubmenu('maintenanceSubmenu', 'a[href="#maintenanceSubmenu"]');
             }
         }
         
-        // Check if current page is in member section
-        if (currentPath.includes('/member/') || currentPath.includes('/membership/')) {
-            const memberSubmenu = document.getElementById('memberSubmenu');
-            if (memberSubmenu) {
-                memberSubmenu.classList.add('show');
-            }
+        // Member Management
+        if (currentPath.includes('/member/') || currentPath.includes('/membership/') || currentPath.includes('/add_member/')) {
+            expandSubmenu('memberSubmenu', 'a[href="#memberSubmenu"]');
         }
         
-        // Check if current page is in plans section
+        // Plans Management
         if (currentPath.includes('/plan/')) {
-            const plansSubmenu = document.getElementById('plansSubmenu');
-            if (plansSubmenu) {
-                plansSubmenu.classList.add('show');
-            }
+            expandSubmenu('plansSubmenu', 'a[href="#plansSubmenu"]');
         }
         
-        // Check if current page is in reports section
+        // Reports
         if (currentPath.includes('/reports/')) {
-            const reportsSubmenu = document.getElementById('reportsSubmenu');
-            if (reportsSubmenu) {
-                reportsSubmenu.classList.add('show');
-            }
+            expandSubmenu('reportsSubmenu', 'a[href="#reportsSubmenu"]');
         }
         
-        // Highlight active nav link
+        // Gym Details
+        if (currentPath.includes('/gym_detail/')) {
+            setActiveLink('a[href*="gym_detail"]');
+        }
+        
+        // Highlight exact matching links
         const navLinks = document.querySelectorAll('.nav-link');
         navLinks.forEach(link => {
-            if (link.href === window.location.href) {
+            const linkHref = link.getAttribute('href');
+            if (linkHref && (linkHref === currentPath || currentPath.includes(linkHref))) {
                 link.classList.add('active');
             }
         });
+        
+        // Store menu state in localStorage to persist across page loads
+        const collapseElements = document.querySelectorAll('.collapse');
+        
+        // Restore menu states from localStorage
+        collapseElements.forEach(element => {
+            const menuId = element.id;
+            const isOpen = localStorage.getItem('menu_' + menuId) === 'open';
+            
+            if (isOpen) {
+                element.classList.add('show');
+                const toggle = document.querySelector(`[href="#${menuId}"]`);
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'true');
+                    toggle.classList.remove('collapsed');
+                }
+            }
+        });
+        
+        // Save menu state when toggled
+        document.querySelectorAll('.collapse-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const targetId = this.getAttribute('href').substring(1);
+                const target = document.getElementById(targetId);
+                
+                setTimeout(() => {
+                    const isOpen = target.classList.contains('show');
+                    localStorage.setItem('menu_' + targetId, isOpen ? 'open' : 'closed');
+                }, 300);
+            });
+        });
+        
+        // Override Bootstrap's collapse behavior to maintain state
+        collapseElements.forEach(element => {
+            element.addEventListener('hidden.bs.collapse', function() {
+                const menuId = this.id;
+                // Only close if not required by current path
+                if (!shouldKeepOpen(currentPath, menuId)) {
+                    localStorage.setItem('menu_' + menuId, 'closed');
+                }
+            });
+            
+            element.addEventListener('shown.bs.collapse', function() {
+                const menuId = this.id;
+                localStorage.setItem('menu_' + menuId, 'open');
+            });
+        });
+        
+        // Function to check if menu should stay open based on current path
+        function shouldKeepOpen(path, menuId) {
+            const pathMenuMap = {
+                'inventorySubmenu': ['/inventory/'],
+                'equipmentSubmenu': ['/equipment/', '/category/'],
+                'maintenanceSubmenu': ['/maintenance/'],
+                'memberSubmenu': ['/member/', '/membership/', '/add_member/'],
+                'plansSubmenu': ['/plan/'],
+                'reportsSubmenu': ['/reports/']
+            };
+            
+            const relevantPaths = pathMenuMap[menuId];
+            return relevantPaths && relevantPaths.some(p => path.includes(p));
+        }
     });
     </script>
 </body>

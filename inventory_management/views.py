@@ -667,11 +667,42 @@ def inventory_list(request, gym_id=None):
 
 
 # Vendor Views
-@login_required
-def vendor_list(request):
-    """List all vendors"""
-    vendors = Vendor.objects.all().order_by("name")
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+from .models import Vendor
+# from .models import Gym  # Import your Gym model
 
+
+@login_required
+def vendor_list(request, gym_id):  # यहाँ =None हटाना जरूरी है
+    """List all vendors with proper gym_id handling"""
+    
+    print(f"DEBUG - gym_id received: {gym_id}")
+    
+    # Permission check
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+    
+    # Get gym
+    gym = get_object_or_404(Gym, id=gym_id)
+    
+    # Check access for gymadmin
+    if request.user.user_type == 'gymadmin':
+        try:
+            gym_admin = GymAdmin.objects.get(user=request.user)
+            if gym not in gym_admin.gyms.all():
+                messages.error(request, "You do not have access to this gym!")
+                return redirect('gymadmin_home')
+        except GymAdmin.DoesNotExist:
+            messages.error(request, "Access denied!")
+            return redirect('login')
+    
+    # Get vendors
+    vendors = Vendor.objects.all().order_by("name")
+    
     search_query = request.GET.get("search")
     if search_query:
         vendors = vendors.filter(
@@ -679,41 +710,121 @@ def vendor_list(request):
             | Q(contact_person__icontains=search_query)
             | Q(phone__icontains=search_query)
         )
-
+    
     context = {
         "vendors": vendors,
         "search_query": search_query,
+        "gym_id": gym_id,
+        "gym": gym,
+        "user": request.user,
     }
-
+    
+    print(f"DEBUG - Context gym_id: {gym_id}")
+    
     return render(request, "inventory_management/vendor_list.html", context)
+
+@login_required
+def add_vendor(request, gym_id):  # gym_id required
+    """Create a new vendor"""
+    
+    gym = get_object_or_404(Gym, id=gym_id)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        contact_person = request.POST.get('contact_person')
+        phone = request.POST.get('phone')
+        email = request.POST.get('email')
+        address = request.POST.get('address')
+        
+        if name:
+            vendor = Vendor.objects.create(
+                name=name,
+                contact_person=contact_person,
+                phone=phone,
+                email=email,
+                address=address
+            )
+            messages.success(request, f'Vendor "{vendor.name}" created successfully!')
+            return redirect('inventory:vendor_list', gym_id=gym_id)  # gym_id pass करें
+        else:
+            messages.error(request, 'Vendor name is required!')
+    
+    context = {
+        "gym_id": gym_id,
+        "gym": gym,
+        "user": request.user,
+    }
+    
+    return render(request, "inventory_management/vendor_create.html", context)
 
 
 @login_required
-def add_vendor(request):
-    """Add new vendor"""
-    if request.method == "POST":
-        try:
-            vendor = Vendor.objects.create(
-                name=request.POST.get("name"),
-                contact_person=request.POST.get("contact_person", ""),
-                email=request.POST.get("email", ""),
-                phone=request.POST.get("phone"),
-                alternate_phone=request.POST.get("alternate_phone", ""),
-                address=request.POST.get("address"),
-                city=request.POST.get("city"),
-                state=request.POST.get("state"),
-                pincode=request.POST.get("pincode"),
-                gst_number=request.POST.get("gst_number", ""),
-                pan_number=request.POST.get("pan_number", ""),
-                rating=request.POST.get("rating", 5),
-                notes=request.POST.get("notes", ""),
-            )
-            messages.success(request, "Vendor added successfully!")
-            return redirect("inventory:vendor_list")
-        except Exception as e:
-            messages.error(request, f"Error adding vendor: {str(e)}")
+def vendor_detail(request, gym_id, vendor_id):  # order ठीक करें
+    """View vendor details"""
+    
+    gym = get_object_or_404(Gym, id=gym_id)
+    vendor = get_object_or_404(Vendor, id=vendor_id)
+    
+    context = {
+        "vendor": vendor,
+        "gym_id": gym_id,
+        "gym": gym,
+        "user": request.user,
+    }
+    
+    return render(request, "inventory_management/vendor_detail.html", context)
 
-    return render(request, "inventory_management/add_vendor.html")
+
+@login_required
+def vendor_edit(request, gym_id, vendor_id):  # order ठीक करें
+    """Edit a vendor"""
+    
+    gym = get_object_or_404(Gym, id=gym_id)
+    vendor = get_object_or_404(Vendor, id=vendor_id)
+    
+    if request.method == 'POST':
+        vendor.name = request.POST.get('name', vendor.name)
+        vendor.contact_person = request.POST.get('contact_person', vendor.contact_person)
+        vendor.phone = request.POST.get('phone', vendor.phone)
+        vendor.email = request.POST.get('email', vendor.email)
+        vendor.address = request.POST.get('address', vendor.address)
+        
+        vendor.save()
+        messages.success(request, f'Vendor "{vendor.name}" updated successfully!')
+        return redirect('inventory:vendor_detail', gym_id=gym_id, vendor_id=vendor.id)
+    
+    context = {
+        "vendor": vendor,
+        "gym_id": gym_id,
+        "gym": gym,
+        "user": request.user,
+    }
+    
+    return render(request, "inventory_management/vendor_edit.html", context)
+
+
+@login_required
+def vendor_delete(request, gym_id, vendor_id):  # order ठीक करें
+    """Delete a vendor"""
+    
+    gym = get_object_or_404(Gym, id=gym_id)
+    vendor = get_object_or_404(Vendor, id=vendor_id)
+    
+    if request.method == 'POST':
+        vendor_name = vendor.name
+        vendor.delete()
+        messages.success(request, f'Vendor "{vendor_name}" deleted successfully!')
+        return redirect('inventory:vendor_list', gym_id=gym_id)
+    
+    context = {
+        "vendor": vendor,
+        "gym_id": gym_id,
+        "gym": gym,
+        "user": request.user,
+    }
+    
+    return render(request, "inventory_management/vendor_confirm_delete.html", context)
+
 
 
 # Simplified placeholder views for other functionality
@@ -1414,53 +1525,6 @@ def stock_transaction(request, gym_id, item_id):
 
 
 # Vendor Views
-@login_required
-def vendor_list(request):
-    """List all vendors"""
-    vendors = Vendor.objects.all().order_by("name")
-
-    search_query = request.GET.get("search")
-    if search_query:
-        vendors = vendors.filter(
-            Q(name__icontains=search_query)
-            | Q(contact_person__icontains=search_query)
-            | Q(phone__icontains=search_query)
-        )
-
-    context = {
-        "vendors": vendors,
-        "search_query": search_query,
-    }
-
-    return render(request, "inventory_management/vendor_list.html", context)
-
-
-@login_required
-def add_vendor(request):
-    """Add new vendor"""
-    if request.method == "POST":
-        try:
-            vendor = Vendor.objects.create(
-                name=request.POST.get("name"),
-                contact_person=request.POST.get("contact_person", ""),
-                email=request.POST.get("email", ""),
-                phone=request.POST.get("phone"),
-                alternate_phone=request.POST.get("alternate_phone", ""),
-                address=request.POST.get("address"),
-                city=request.POST.get("city"),
-                state=request.POST.get("state"),
-                pincode=request.POST.get("pincode"),
-                gst_number=request.POST.get("gst_number", ""),
-                pan_number=request.POST.get("pan_number", ""),
-                rating=request.POST.get("rating", 5),
-                notes=request.POST.get("notes", ""),
-            )
-            messages.success(request, "Vendor added successfully!")
-            return redirect("vendor_list")
-        except Exception as e:
-            messages.error(request, f"Error adding vendor: {str(e)}")
-
-    return render(request, "inventory_management/add_vendor.html")
 
 
 # Reports and Analytics Views
@@ -1871,9 +1935,8 @@ def get_inventory_item_data(request, item_id):
 
 # inventory_management/views.py में add करें:
 
-
 @login_required
-def add_equipment_category(request):
+def add_equipment_category(request, gym_id):  # Add gym_id parameter here
     """Add new equipment category"""
     if request.user.user_type not in ["superadmin", "gymadmin"]:
         messages.error(request, "Access denied!")
@@ -1889,15 +1952,23 @@ def add_equipment_category(request):
             # Validation
             if not name:
                 messages.error(request, "Category name is required!")
+                context = {
+                    "gym_id": gym_id,
+                    "existing_categories": EquipmentCategory.objects.all().order_by("name")
+                }
                 return render(
-                    request, "inventory_management/add_equipment_category.html"
+                    request, "inventory_management/add_equipment_category.html", context
                 )
 
             # Check if category already exists
             if EquipmentCategory.objects.filter(name__iexact=name).exists():
                 messages.error(request, f'Category "{name}" already exists!')
+                context = {
+                    "gym_id": gym_id,
+                    "existing_categories": EquipmentCategory.objects.all().order_by("name")
+                }
                 return render(
-                    request, "inventory_management/add_equipment_category.html"
+                    request, "inventory_management/add_equipment_category.html", context
                 )
 
             # Create category
@@ -1918,6 +1989,7 @@ def add_equipment_category(request):
     existing_categories = EquipmentCategory.objects.all().order_by("name")
 
     context = {
+        "gym_id": gym_id,  # Now gym_id is available from URL parameter
         "existing_categories": existing_categories,
     }
 
@@ -1930,20 +2002,18 @@ def equipment_category_list(request):
     if request.user.user_type not in ["superadmin", "gymadmin"]:
         messages.error(request, "Access denied!")
         return redirect("login")
-
-    categories = EquipmentCategory.objects.all().order_by("name")
-
-    # Search functionality
-    search_query = request.GET.get("search", "")
-    if search_query:
-        categories = categories.filter(name__icontains=search_query)
-
+    
+    # Get gym_id - you can get it from user or use default
+    gym_id = 1  # Default gym or get from request.user.gym.id
+    
+    categories = EquipmentCategory.objects.all().order_by('name')
+    
     context = {
-        "categories": categories,
-        "search_query": search_query,
+        'categories': categories,
+        'gym_id': gym_id,  # Add this line
     }
-
-    return render(request, "inventory_management/equipment_category_list.html", context)
+    
+    return render(request, 'inventory_management/equipment_category_list.html', context)
 
 
 @login_required

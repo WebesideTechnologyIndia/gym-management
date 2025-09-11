@@ -1,4 +1,4 @@
-# inventory_management/urls.py - Complete URL patterns
+# inventory_management/urls.py - FIXED VERSION
 
 from django.urls import path
 from . import views
@@ -14,9 +14,9 @@ urlpatterns = [
     path('equipment/<int:gym_id>/add/', views.add_equipment, name='add_equipment'),
     path('equipment/<int:gym_id>/<int:equipment_id>/', views.equipment_detail, name='equipment_detail'),
     
-    # Equipment Category URLs - 🔥 NEW ADDITIONS
+    # Equipment Category URLs
     path('categories/', views.equipment_category_list, name='equipment_category_list'),
-    path('categories/add/', views.add_equipment_category, name='add_equipment_category'),
+    path('categories/<int:gym_id>/add/', views.add_equipment_category, name='add_equipment_category'),
     path('categories/<int:category_id>/edit/', views.edit_equipment_category, name='edit_equipment_category'),
     path('categories/<int:category_id>/delete/', views.delete_equipment_category, name='delete_equipment_category'),
     
@@ -32,9 +32,12 @@ urlpatterns = [
     path('inventory/<int:gym_id>/<int:item_id>/', views.inventory_detail, name='inventory_detail'),
     path('inventory/<int:gym_id>/<int:item_id>/transaction/', views.stock_transaction, name='stock_transaction'),
     
-    # Vendor URLs
-    path('vendors/', views.vendor_list, name='vendor_list'),
-    path('vendors/add/', views.add_vendor, name='add_vendor'),
+    # Vendor URLs - FIXED और COMPLETE
+    path('gym/<int:gym_id>/vendors/', views.vendor_list, name='vendor_list'),
+    path('gym/<int:gym_id>/vendors/create/', views.add_vendor, name='vendor_create'),
+    path('gym/<int:gym_id>/vendors/<int:vendor_id>/', views.vendor_detail, name='vendor_detail'),
+    path('gym/<int:gym_id>/vendors/<int:vendor_id>/edit/', views.vendor_edit, name='vendor_edit'),
+    path('gym/<int:gym_id>/vendors/<int:vendor_id>/delete/', views.vendor_delete, name='vendor_delete'),
     
     # Reports URLs
     path('reports/<int:gym_id>/equipment/', views.equipment_reports, name='equipment_reports'),

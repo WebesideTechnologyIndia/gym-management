@@ -1,38 +1,75 @@
 {% extends 'multiple_gym/base.html' %}
-{% load static %}
 
-{% block title %}Vendor Management{% endblock %}
+{% block title %}Vendor Management - DEBUG{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2><i class="fas fa-truck me-2"></i>Vendor Management</h2>
-        <p class="text-muted mb-0">Manage suppliers and service providers</p>
-    </div>
-    <div>
-        <a href="{% url 'inventory:add_vendor' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add Vendor
-        </a>
-    </div>
+<!-- DEBUG INFORMATION -->
+<div class="alert alert-info">
+    <h5>🔍 DEBUG INFORMATION</h5>
+    <p><strong>User:</strong> {{ user|default:"NOT_SET" }}</p>
+    <p><strong>User Authenticated:</strong> {{ user.is_authenticated|default:"NOT_SET" }}</p>
+    <p><strong>User Type:</strong> {{ user.user_type|default:"NOT_SET" }}</p>
+    <p><strong>Gym ID:</strong> {{ gym_id|default:"NOT_SET" }}</p>
+    <p><strong>Gym:</strong> {{ gym|default:"NOT_SET" }}</p>
+    
+    <!-- Check sidebar conditions -->
+    <hr>
+    <h6>Sidebar Conditions:</h6>
+    <p><strong>user.is_authenticated:</strong> {{ user.is_authenticated }}</p>
+    <p><strong>user.user_type:</strong> "{{ user.user_type }}"</p>
+    <p><strong>user.user_type != 'member':</strong> 
+        {% if user.user_type != 'member' %}✅ True{% else %}❌ False{% endif %}
+    </p>
+    <p><strong>Should show sidebar:</strong> 
+        {% if user.is_authenticated and user.user_type != 'member' %}
+            ✅ YES - Both conditions met
+        {% else %}
+            ❌ NO - Conditions not met
+        {% endif %}
+    </p>
 </div>
 
-<!-- Search -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-truck me-2"></i>Vendor Management</h2>
+    {% if gym_id %}
+    <a href="{% url 'inventory:vendor_create' gym_id %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Add New Vendor
+    </a>
+    {% else %}
+    <span class="text-danger">No Gym ID - Cannot create vendor</span>
+    {% endif %}
+</div>
+
+<!-- Search Bar -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-8">
-                <label class="form-label">Search Vendors</label>
-                <input type="text" name="search" class="form-control" placeholder="Search by name, contact person, or phone..." value="{{ search_query }}">
+        <form method="get" class="row g-3">
+            <div class="col-md-10">
+                <input type="text" 
+                       class="form-control" 
+                       name="search" 
+                       value="{{ search_query|default:'' }}" 
+                       placeholder="Search vendors by name, contact person, or phone...">
             </div>
-            <div class="col-md-4">
-                <label class="form-label">&nbsp;</label>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search me-2"></i>Search
-                    </button>
-                </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search me-1"></i>Search
+                </button>
             </div>
         </form>
+        
+        {% if search_query %}
+        <div class="mt-2">
+            <small class="text-muted">
+                Showing results for: <strong>"{{ search_query }}"</strong>
+                {% if gym_id %}
+                <a href="{% url 'inventory:vendor_list' gym_id %}" class="ms-2 text-decoration-none">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </small>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -40,89 +77,76 @@
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
-            <i class="fas fa-list me-2"></i>Vendors ({{ vendors|length }})
+            <i class="fas fa-list me-2"></i>All Vendors
+            <span class="badge bg-primary ms-2">{{ vendors.count }}</span>
         </h5>
     </div>
     <div class="card-body">
         {% if vendors %}
-        <div class="row">
-            {% for vendor in vendors %}
-            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h5 class="card-title mb-1">{{ vendor.name }}</h5>
-                                <p class="text-muted mb-0">{{ vendor.contact_person|default:"No contact person" }}</p>
-                            </div>
-                            <div class="text-end">
-                                {% for i in "12345" %}
-                                <i class="fas fa-star {% if forloop.counter <= vendor.rating %}text-warning{% else %}text-muted{% endif %}"></i>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-phone text-primary me-2"></i>
-                                <span>{{ vendor.phone }}</span>
-                            </div>
-                            {% if vendor.email %}
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-envelope text-primary me-2"></i>
-                                <span class="text-truncate">{{ vendor.email }}</span>
-                            </div>
-                            {% endif %}
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-map-marker-alt text-primary me-2"></i>
-                                <span class="text-truncate">{{ vendor.city }}, {{ vendor.state }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-{% if vendor.is_active %}success{% else %}secondary{% endif %}">
-                                {% if vendor.is_active %}Active{% else %}Inactive{% endif %}
-                            </span>
-                            <small class="text-muted">{{ vendor.created_at|date:"M Y" }}</small>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button class="btn btn-outline-primary btn-sm" onclick="viewVendor({{ vendor.id }})">
-                                <i class="fas fa-eye me-1"></i>View
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="contactVendor('{{ vendor.phone }}')">
-                                <i class="fas fa-phone me-1"></i>Call
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact Person</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in vendors %}
+                        <tr>
+                            <td>
+                                <strong>{{ vendor.name }}</strong>
+                            </td>
+                            <td>{{ vendor.contact_person|default:"-" }}</td>
+                            <td>{{ vendor.phone|default:"-" }}</td>
+                            <td>{{ vendor.email|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if gym_id %}
+                                    <a href="{% url 'inventory:vendor_detail' vendor.id gym_id %}" 
+                                       class="btn btn-outline-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:vendor_edit' vendor.id gym_id %}" 
+                                       class="btn btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:vendor_delete' vendor.id gym_id %}" 
+                                       class="btn btn-outline-danger" title="Delete"
+                                       onclick="return confirm('Are you sure you want to delete {{ vendor.name }}?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">No actions (no gym_id)</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
-        </div>
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-truck fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No Vendors Found</h5>
-            <p class="text-muted">Start by adding vendors to manage your suppliers.</p>
-            <a href="{% url 'inventory:add_vendor' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>Add First Vendor
-            </a>
-        </div>
+            <div class="text-center py-4">
+                <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Vendors Found</h5>
+                <p class="text-muted">
+                    {% if search_query %}
+                        No vendors match your search criteria.
+                    {% else %}
+                        Start by adding your first vendor.
+                    {% endif %}
+                </p>
+                {% if gym_id and not search_query %}
+                <a href="{% url 'inventory:vendor_create' gym_id %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add First Vendor
+                </a>
+                {% endif %}
+            </div>
         {% endif %}
     </div>
 </div>
-
-<script>
-function viewVendor(vendorId) {
-    // You can implement vendor detail view
-    alert('Vendor detail view coming soon!');
-}
-
-function contactVendor(phone) {
-    if (phone) {
-        window.location.href = 'tel:' + phone;
-    }
-}
-</script>
 {% endblock %}

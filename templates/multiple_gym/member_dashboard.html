@@ -1,7 +1,5 @@
 {% extends 'multiple_gym/base.html' %}
-
 {% block title %}Member Dashboard{% endblock %}
-
 {% block extra_css %}
 <style>
     .stats-card {
@@ -23,6 +21,12 @@
     
     .membership-card {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        border: none;
+        color: white;
+    }
+    
+    .due-card {
+        background: linear-gradient(135deg, #ff7b7b 0%, #d63384 100%);
         border: none;
         color: white;
     }
@@ -56,9 +60,19 @@
         color: #007bff;
         margin-right: 8px;
     }
+    
+    .payment-progress {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    
+    .payment-item {
+        border-left: 3px solid #007bff;
+        background: #f8f9fa;
+        margin-bottom: 10px;
+        border-radius: 5px;
+    }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
@@ -83,7 +97,7 @@
             </div>
         </div>
     </div>
-
+    
     <!-- Stats Cards Row -->
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
@@ -107,11 +121,11 @@
         </div>
         
         <div class="col-md-3 mb-3">
-            <div class="card membership-card text-center">
+            <div class="card due-card text-center">
                 <div class="card-body">
-                    <i class="fas fa-id-card fa-3x mb-3"></i>
-                    <h3 class="mb-1">{{ total_memberships }}</h3>
-                    <p class="mb-0">Total Memberships</p>
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h3 class="mb-1">₹{{ total_due|floatformat:0 }}</h3>
+                    <p class="mb-0">Amount Due</p>
                 </div>
             </div>
         </div>
@@ -198,7 +212,7 @@
             </div>
         </div>
 
-        <!-- Current Membership & History -->
+        <!-- Current Membership & Payment Information -->
         <div class="col-lg-8">
             <!-- Current Membership -->
             {% if active_membership %}
@@ -227,8 +241,8 @@
                             {{ active_membership.end_date|date:"M d, Y" }}
                         </div>
                         <div class="col-md-6 mb-3">
-                            <strong>Amount Paid:</strong><br>
-                            <span class="text-success fs-5">₹{{ active_membership.plan.price }}</span>
+                            <strong>Total Amount:</strong><br>
+                            <span class="text-primary fs-5">₹{{ active_membership.total_amount|floatformat:0 }}</span>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong>Days Left:</strong><br>
@@ -250,6 +264,58 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Payment Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Payment Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Total Amount:</strong><br>
+                            <span class="text-primary fs-5">₹{{ active_membership.total_amount|floatformat:0 }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Paid Amount:</strong><br>
+                            <span class="text-success fs-5">₹{{ active_membership.paid_amount|floatformat:0 }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Remaining Amount:</strong><br>
+                            {% if active_membership.remaining_amount > 0 %}
+                                <span class="text-danger fs-5">₹{{ active_membership.remaining_amount|floatformat:0 }}</span>
+                            {% else %}
+                                <span class="text-success fs-5">Fully Paid</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Payment Status:</strong><br>
+                            {% if active_membership.payment_status == 'paid' %}
+                                <span class="badge bg-success fs-6">Fully Paid</span>
+                            {% elif active_membership.payment_status == 'partial' %}
+                                <span class="badge bg-warning fs-6">Partially Paid</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">Unpaid</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Progress Bar -->
+                    <div class="mt-3">
+                        <strong>Payment Progress:</strong>
+                        <div class="progress mt-2" style="height: 20px;">
+                            <div class="progress-bar payment-progress" role="progressbar" 
+                                 style="width: {{ payment_percentage }}%"
+                                 aria-valuenow="{{ payment_percentage }}" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ payment_percentage|floatformat:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% else %}
             <div class="card shadow mb-4">
                 <div class="card-body text-center">
@@ -260,9 +326,44 @@
             </div>
             {% endif %}
 
+            <!-- Recent Payments -->
+            {% if recent_payments %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>Recent Payments
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for payment in recent_payments %}
+                    <div class="payment-item p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-primary">₹{{ payment.amount|floatformat:0 }}</strong>
+                                <small class="text-muted ms-2">via {{ payment.payment_method|title }}</small>
+                                {% if payment.transaction_id %}
+                                <br><small class="text-muted">TXN: {{ payment.transaction_id }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block">{{ payment.payment_date|date:"M d, Y" }}</small>
+                                <span class="badge bg-success">{{ payment.payment_status|title }}</span>
+                            </div>
+                        </div>
+                        {% if payment.notes %}
+                        <div class="mt-2">
+                            <small class="text-muted">{{ payment.notes }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Membership History -->
             <div class="card shadow">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-history me-2"></i>Membership History
                     </h5>
@@ -273,24 +374,46 @@
                         <div class="membership-history-card card">
                             <div class="card-body">
                                 <div class="row align-items-center">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <h6 class="mb-1">{{ membership.plan.name }}</h6>
                                         <small class="text-muted">{{ membership.plan.duration_months }} months</small>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <small class="text-muted">{{ membership.start_date|date:"M d, Y" }} - {{ membership.end_date|date:"M d, Y" }}</small>
                                     </div>
                                     <div class="col-md-2">
-                                        <strong class="text-success">₹{{ membership.plan.price }}</strong>
+                                        <strong class="text-success">₹{{ membership.total_amount|floatformat:0 }}</strong>
+                                        <br><small class="text-muted">Paid: ₹{{ membership.paid_amount|floatformat:0 }}</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        {% if membership.payment_status == 'paid' %}
+                                            <span class="badge bg-success">Paid</span>
+                                        {% elif membership.payment_status == 'partial' %}
+                                            <span class="badge bg-warning">Partial</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Unpaid</span>
+                                        {% endif %}
                                     </div>
                                     <div class="col-md-2 text-end">
-                                        {% if membership.is_active and membership.end_date >= membership.start_date %}
+                                        {% if membership.membership_status == 'active' %}
                                             <span class="badge bg-success">Active</span>
-                                        {% else %}
+                                        {% elif membership.membership_status == 'expired' %}
                                             <span class="badge bg-danger">Expired</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{{ membership.membership_status|title }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
+                                {% if membership.remaining_amount > 0 %}
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <small class="text-danger">
+                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                            Remaining: ₹{{ membership.remaining_amount|floatformat:0 }}
+                                        </small>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -305,9 +428,35 @@
         </div>
     </div>
 
-    <!-- Gym Information -->
+    <!-- Summary Statistics Row -->
     <div class="row mt-4">
-        <div class="col-12">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Membership Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h4 class="text-primary">{{ total_memberships }}</h4>
+                            <small class="text-muted">Total Memberships</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="text-success">{{ active_memberships }}</h4>
+                            <small class="text-muted">Active</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="text-danger">{{ expired_memberships }}</h4>
+                            <small class="text-muted">Expired</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
             <div class="card shadow">
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">
@@ -315,32 +464,25 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h4 class="text-primary">{{ gym.name }}</h4>
-                            <p class="text-muted">
-                                <i class="fas fa-map-marker-alt me-2"></i>{{ gym.address }}
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-2">
-                                <i class="fas fa-phone me-2 text-primary"></i>{{ gym.phone }}
-                            </div>
-                            <div class="mb-2">
-                                <i class="fas fa-envelope me-2 text-primary"></i>{{ gym.email }}
-                            </div>
-                            <div class="mb-2">
-                                <i class="fas fa-calendar me-2 text-primary"></i>
-                                Member since {{ member.created_at|date:"M d, Y" }}
-                            </div>
-                        </div>
-                    </div>
+                    <h5 class="text-primary">{{ gym.name }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ gym.address }}
+                    </p>
+                    <p class="mb-1">
+                        <i class="fas fa-phone me-2 text-primary"></i>{{ gym.phone }}
+                    </p>
+                    <p class="mb-1">
+                        <i class="fas fa-envelope me-2 text-primary"></i>{{ gym.email }}
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-calendar me-2 text-primary"></i>
+                        Member since {{ member.created_at|date:"M d, Y" }}
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 <script>
     // Add some animations
     document.addEventListener('DOMContentLoaded', function() {
@@ -356,6 +498,17 @@
                 card.style.transform = 'translateY(0)';
             }, index * 100);
         });
+        
+        // Animate progress bar
+        const progressBar = document.querySelector('.payment-progress');
+        if (progressBar) {
+            const targetWidth = progressBar.style.width;
+            progressBar.style.width = '0%';
+            setTimeout(() => {
+                progressBar.style.transition = 'width 2s ease-in-out';
+                progressBar.style.width = targetWidth;
+            }, 1000);
+        }
     });
 </script>
 {% endblock %}
