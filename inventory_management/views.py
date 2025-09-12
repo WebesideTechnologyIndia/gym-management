@@ -248,10 +248,6 @@ from .forms import EquipmentForm
 
 # from your_main_app.models import Gym, GymAdmin  # Adjust import as needed
 
-from dateutil.relativedelta import relativedelta
-
-
-from dateutil.relativedelta import relativedelta
 
 
 @login_required
@@ -755,7 +751,7 @@ def add_vendor(request, gym_id):  # gym_id required
         "user": request.user,
     }
     
-    return render(request, "inventory_management/vendor_create.html", context)
+    return render(request, "inventory_management/add_vendor.html", context)
 
 
 @login_required
