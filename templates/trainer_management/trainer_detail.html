@@ -1,0 +1,471 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}{{ trainer.user.get_full_name }} - Trainer Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user-tie"></i> {{ trainer.user.get_full_name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'trainer_management:assign_members' gym_id trainer.id %}" class="btn btn-success">
+                <i class="fas fa-user-plus"></i> Assign Members
+            </a>
+            <a href="{% url 'trainer_management:trainer_permissions' gym_id trainer.id %}" class="btn btn-warning">
+                <i class="fas fa-key"></i> Permissions
+            </a>
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-cog"></i> Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="editTrainer()">
+                        <i class="fas fa-edit"></i> Edit Trainer
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="viewSchedule()">
+                        <i class="fas fa-calendar"></i> View Schedule
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" onclick="deactivateTrainer()">
+                        <i class="fas fa-user-slash"></i> Deactivate
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+        <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Trainers
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Trainer Profile -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                {% if trainer.photo %}
+                    <img src="{{ trainer.photo.url }}" class="rounded-circle mb-3" width="150" height="150" alt="Trainer Photo">
+                {% else %}
+                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 150px; height: 150px;">
+                        <i class="fas fa-user text-white fa-3x"></i>
+                    </div>
+                {% endif %}
+                
+                <h4>{{ trainer.user.get_full_name }}</h4>
+                <p class="text-muted mb-2">{{ trainer.specialization|default:"General Trainer" }}</p>
+                
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="border-end">
+                            <strong class="d-block">{{ trainer.experience_years }}</strong>
+                            <small class="text-muted">Years Exp.</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border-end">
+                            <strong class="d-block">{{ trainer.assigned_members_count }}</strong>
+                            <small class="text-muted">Members</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <strong class="d-block">{{ total_sessions }}</strong>
+                        <small class="text-muted">Sessions</small>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <span class="badge bg-{% if trainer.is_active %}success{% else %}danger{% endif %} me-1">
+                        {% if trainer.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                    <span class="badge bg-secondary">{{ trainer.get_salary_type_display }}</span>
+                </div>
+
+                {% if trainer.bio %}
+                <div class="text-start">
+                    <h6>About</h6>
+                    <p class="small">{{ trainer.bio }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <i class="fas fa-envelope text-muted me-2"></i>
+                    <a href="mailto:{{ trainer.user.email }}">{{ trainer.user.email }}</a>
+                </p>
+                <p class="mb-2">
+                    <i class="fas fa-phone text-muted me-2"></i>
+                    <a href="tel:{{ trainer.phone }}">{{ trainer.phone }}</a>
+                </p>
+                {% if trainer.alternate_phone %}
+                <p class="mb-2">
+                    <i class="fas fa-phone-alt text-muted me-2"></i>
+                    <a href="tel:{{ trainer.alternate_phone }}">{{ trainer.alternate_phone }}</a>
+                </p>
+                {% endif %}
+                
+                {% if trainer.address_line1 %}
+                <hr>
+                <p class="mb-1">
+                    <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                    <strong>Address:</strong>
+                </p>
+                <p class="small text-muted ms-4 mb-0">
+                    {{ trainer.address_line1 }}<br>
+                    {% if trainer.address_line2 %}{{ trainer.address_line2 }}<br>{% endif %}
+                    {% if trainer.city %}{{ trainer.city }}, {% endif %}
+                    {% if trainer.state %}{{ trainer.state }} {% endif %}
+                    {% if trainer.pin_code %}{{ trainer.pin_code }}{% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Professional Info -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Professional Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Hire Date:</strong></div>
+                    <div class="col-6">{{ trainer.hire_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Experience:</strong></div>
+                    <div class="col-6">{{ trainer.experience_years }} years</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Salary Type:</strong></div>
+                    <div class="col-6">{{ trainer.get_salary_type_display }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Amount:</strong></div>
+                    <div class="col-6">₹{{ trainer.salary_amount }}</div>
+                </div>
+                {% if trainer.date_of_birth %}
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Age:</strong></div>
+                    <div class="col-6">{{ trainer.age }} years</div>
+                </div>
+                {% endif %}
+                
+                {% if trainer.certifications %}
+                <hr>
+                <div class="mb-2">
+                    <strong>Certifications:</strong>
+                    <p class="small text-muted mt-1">{{ trainer.certifications|linebreaks }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-8">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <h4>{{ trainer.assigned_members_count }}</h4>
+                        <p class="mb-0 small">Assigned Members</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                        <h4>{{ completed_sessions }}</h4>
+                        <p class="mb-0 small">Completed Sessions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-plus fa-2x mb-2"></i>
+                        <h4>{{ upcoming_sessions }}</h4>
+                        <p class="mb-0 small">Upcoming Sessions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h4>{{ total_sessions }}</h4>
+                        <p class="mb-0 small">Total Sessions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned Members -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-users"></i> Assigned Members ({{ assigned_members.count }})
+                </h5>
+                <a href="{% url 'trainer_management:assign_members' gym_id trainer.id %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-user-plus"></i> Assign More
+                </a>
+            </div>
+            <div class="card-body">
+                {% if assigned_members %}
+                    <div class="row">
+                        {% for assignment in assigned_members %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-left-primary">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            {% if assignment.member.photo %}
+                                                <img src="{{ assignment.member.photo.url }}" class="rounded-circle" width="40" height="40" alt="Member">
+                                            {% else %}
+                                                <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">{{ assignment.member.user.get_full_name }}</strong>
+                                            <small class="text-muted">
+                                                <span class="badge bg-secondary">{{ assignment.get_assignment_type_display }}</span>
+                                                • Assigned: {{ assignment.assigned_date|date:"M d, Y" }}
+                                            </small>
+                                            {% if assignment.goals %}
+                                            <p class="small text-muted mb-0 mt-1">{{ assignment.goals|truncatewords:10 }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-info" onclick="viewMemberDetails({{ assignment.member.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if assigned_members.count > 10 %}
+                    <div class="text-center">
+                        <button class="btn btn-outline-primary" onclick="loadMoreMembers()">
+                            <i class="fas fa-plus"></i> Load More Members
+                        </button>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-user-slash fa-3x mb-3"></i>
+                        <h5>No Members Assigned</h5>
+                        <p>This trainer doesn't have any members assigned yet.</p>
+                        <a href="{% url 'trainer_management:assign_members' gym_id trainer.id %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Assign Members Now
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt"></i> Recent Sessions ({{ recent_sessions.count }})
+                </h5>
+                <a href="{% url 'trainer_management:session_list' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Sessions
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Session</th>
+                                    <th>Date & Time</th>
+                                    <th>Type</th>
+                                    <th>Participants</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in recent_sessions %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ session.title }}</strong>
+                                        {% if session.description %}
+                                        <br><small class="text-muted">{{ session.description|truncatewords:8 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ session.session_date|date:"M d" }}</strong>
+                                        <br><small class="text-muted">{{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ session.get_session_type_display }}</span>
+                                        <br><small class="text-muted">{{ session.get_difficulty_level_display }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ session.participants_count }}/{{ session.max_participants }}</strong>
+                                        <br><small class="text-muted">participants</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if session.status == 'completed' %}success{% elif session.status == 'active' %}warning{% elif session.status == 'cancelled' %}danger{% else %}info{% endif %}">
+                                            {{ session.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'trainer_management:session_detail' session.id %}" class="btn btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if session.status != 'completed' and session.status != 'cancelled' %}
+                                            <a href="{% url 'trainer_management:mark_attendance' session.id %}" class="btn btn-outline-success">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                        <h5>No Sessions Yet</h5>
+                        <p>This trainer hasn't created any sessions yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Member Details Modal -->
+<div class="modal fade" id="memberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Member Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="memberModalContent">
+                <!-- Member details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.border-left-primary {
+    border-left: 4px solid #007bff !important;
+}
+
+.card-body .badge {
+    font-size: 0.75rem;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editTrainer() {
+    // Redirect to edit trainer page
+    window.location.href = "{% url 'trainer_management:trainer_list' gym_id %}#edit-{{ trainer.id }}";
+}
+
+function viewSchedule() {
+    // Redirect to trainer schedule/calendar
+    window.location.href = "{% url 'trainer_management:session_list' %}";
+}
+
+function deactivateTrainer() {
+    if (confirm('Are you sure you want to deactivate {{ trainer.user.get_full_name }}? This will prevent them from accessing their trainer account.')) {
+        // Make AJAX call to deactivate trainer
+        fetch(`/trainer/ajax/deactivate-trainer/{{ trainer.id }}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deactivating trainer: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deactivating trainer.');
+        });
+    }
+}
+
+function viewMemberDetails(memberId) {
+    // Load member details in modal
+    fetch(`/ajax/member/${memberId}/details/`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('memberModalContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('memberModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('memberModalContent').innerHTML = 
+                '<div class="alert alert-danger">Error loading member details.</div>';
+            new bootstrap.Modal(document.getElementById('memberModal')).show();
+        });
+}
+
+function loadMoreMembers() {
+    // Implement pagination for members
+    alert('Load more members functionality coming soon!');
+}
+
+// Auto-refresh stats every 2 minutes
+setInterval(function() {
+    // Refresh only the stats cards
+    console.log('Refreshing trainer stats...');
+}, 120000);
+</script>
+{% endblock %}

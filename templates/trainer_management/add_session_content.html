@@ -1,0 +1,671 @@
+<!-- trainer_management/templates/trainer_management/add_session_content.html -->
+<!-- FIXED VERSION WITH WORKING JAVASCRIPT -->
+
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}Add Content - {{ session.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-header {
+    background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.content-type-selector {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.content-type-card {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+.content-type-card:hover {
+    border-color: #6f42c1;
+    box-shadow: 0 4px 15px rgba(111, 66, 193, 0.2);
+}
+
+.content-type-card.selected {
+    border-color: #6f42c1;
+    background: #f8f9ff;
+}
+
+.content-form-section {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.content-form-section.active {
+    display: block;
+}
+
+.file-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: #6f42c1;
+    background: #f8f9ff;
+}
+
+.file-upload-area.dragover {
+    border-color: #6f42c1;
+    background: #f0f8ff;
+}
+
+.content-preview {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.youtube-preview {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Content Header -->
+    <div class="content-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-plus-circle"></i> Add Session Content</h2>
+                <h4 class="mb-1">{{ session.title }}</h4>
+                <p class="mb-0">{{ session.session_date|date:"l, F d, Y" }} | {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <a href="{% url 'trainer_management:session_detail' session.id %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Back to Session
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="contentForm">
+        {% csrf_token %}
+        
+        <!-- Content Type Selection -->
+        <div class="content-type-selector">
+            <h4 class="mb-4"><i class="fas fa-file-alt"></i> Choose Content Type</h4>
+            
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="pdf">
+                        <i class="fas fa-file-pdf fa-3x text-danger mb-3"></i>
+                        <h5>PDF Document</h5>
+                        <p class="text-muted small">Upload PDF files, guides, manuals</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="video">
+                        <i class="fas fa-video fa-3x text-primary mb-3"></i>
+                        <h5>Video File</h5>
+                        <p class="text-muted small">Upload video demonstrations</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="youtube">
+                        <i class="fab fa-youtube fa-3x text-danger mb-3"></i>
+                        <h5>YouTube Video</h5>
+                        <p class="text-muted small">Link to YouTube videos</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="image">
+                        <i class="fas fa-image fa-3x text-success mb-3"></i>
+                        <h5>Image</h5>
+                        <p class="text-muted small">Exercise images, diagrams</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="audio">
+                        <i class="fas fa-music fa-3x text-warning mb-3"></i>
+                        <h5>Audio File</h5>
+                        <p class="text-muted small">Music, instructions, podcasts</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="link">
+                        <i class="fas fa-link fa-3x text-info mb-3"></i>
+                        <h5>External Link</h5>
+                        <p class="text-muted small">Links to websites, articles</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="content-type-card" data-type="text">
+                        <i class="fas fa-file-alt fa-3x text-secondary mb-3"></i>
+                        <h5>Text Content</h5>
+                        <p class="text-muted small">Written instructions, notes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden input for content type -->
+        <input type="hidden" name="content_type" id="content_type">
+
+        <!-- Basic Information (Common for all types) -->
+        <div class="content-form-section" id="basic-info">
+            <h4 class="mb-4"><i class="fas fa-info-circle"></i> Basic Information</h4>
+            
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">Content Title *</label>
+                    <input type="text" class="form-control" name="title" required 
+                           placeholder="Enter a descriptive title for this content">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Display Order</label>
+                    <input type="number" class="form-control" name="order" value="0" min="0">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" name="description" rows="3" 
+                          placeholder="Brief description of this content..."></textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_required" id="is_required">
+                        <label class="form-check-label" for="is_required">
+                            <strong>Required Content</strong>
+                            <small class="d-block text-muted">Members must view/complete this content</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_public" id="is_public">
+                        <label class="form-check-label" for="is_public">
+                            <strong>Public Content</strong>
+                            <small class="d-block text-muted">Visible to all gym members</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF/Video/Image/Audio Upload Form -->
+        <div class="content-form-section" id="file-upload">
+            <h4 class="mb-4"><i class="fas fa-cloud-upload-alt"></i> Upload File</h4>
+            
+            <div class="file-upload-area" onclick="document.getElementById('file-input').click()">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                <h5>Click to upload or drag and drop</h5>
+                <p class="text-muted">
+                    <span id="file-type-text">Select a file to upload</span><br>
+                    <small>Maximum file size: 50MB</small>
+                </p>
+                <input type="file" id="file-input" name="file" style="display: none;" 
+                       accept="" onchange="handleFileSelect(this)">
+            </div>
+            
+            <div id="file-preview" class="content-preview" style="display: none;">
+                <h6>File Preview:</h6>
+                <div id="file-info"></div>
+            </div>
+        </div>
+
+        <!-- YouTube Video Form -->
+        <div class="content-form-section" id="youtube-form">
+            <h4 class="mb-4"><i class="fab fa-youtube"></i> YouTube Video</h4>
+            
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">YouTube URL *</label>
+                    <input type="url" class="form-control" name="youtube_url" 
+                           placeholder="https://www.youtube.com/watch?v=..." 
+                           onchange="previewYouTube(this.value)">
+                    <small class="form-text text-muted">Paste the full YouTube video URL</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Duration</label>
+                    <input type="text" class="form-control" name="duration" 
+                           placeholder="e.g., 10:30">
+                </div>
+            </div>
+            
+            <div id="youtube-preview" class="youtube-preview" style="display: none;">
+                <iframe width="100%" height="200" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <!-- External Link Form -->
+        <div class="content-form-section" id="link-form">
+            <h4 class="mb-4"><i class="fas fa-external-link-alt"></i> External Link</h4>
+            
+            <div class="mb-3">
+                <label class="form-label">External URL *</label>
+                <input type="url" class="form-control" name="external_url" 
+                       placeholder="https://example.com" 
+                       onchange="previewLink(this.value)">
+                <small class="form-text text-muted">Link to external website, article, or resource</small>
+            </div>
+            
+            <div id="link-preview" class="content-preview" style="display: none;">
+                <h6>Link Preview:</h6>
+                <div id="link-info"></div>
+            </div>
+        </div>
+
+        <!-- Text Content Form -->
+        <div class="content-form-section" id="text-form">
+            <h4 class="mb-4"><i class="fas fa-file-alt"></i> Text Content</h4>
+            
+            <div class="mb-3">
+                <label class="form-label">Content Text *</label>
+                <textarea class="form-control" name="text_content" rows="10" 
+                          placeholder="Enter your text content here...&#10;&#10;You can include:&#10;- Exercise instructions&#10;- Workout plans&#10;- Nutritional advice&#10;- Motivational content"></textarea>
+                <small class="form-text text-muted">You can use line breaks and basic formatting</small>
+            </div>
+            
+            <div class="content-preview">
+                <h6>Preview:</h6>
+                <div id="text-preview" class="border p-3 bg-white rounded">
+                    <em class="text-muted">Text preview will appear here...</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="content-form-section active">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" disabled id="submit-btn">
+                            <i class="fas fa-save"></i> Add Content
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-grid">
+                        <a href="{% url 'trainer_management:session_detail' session.id %}" 
+                           class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Content type selection - FIXED
+document.addEventListener('DOMContentLoaded', function() {
+    // Content type card click handlers
+    const contentTypeCards = document.querySelectorAll('.content-type-card');
+    contentTypeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const contentType = this.getAttribute('data-type');
+            selectContentType(contentType);
+        });
+    });
+    
+    // Text content preview
+    const textContent = document.querySelector('textarea[name="text_content"]');
+    if (textContent) {
+        textContent.addEventListener('input', function() {
+            const text = this.value;
+            const preview = document.getElementById('text-preview');
+            if (preview) {
+                preview.innerHTML = text.replace(/\n/g, '<br>') || '<em class="text-muted">Text preview will appear here...</em>';
+            }
+        });
+    }
+    
+    // File upload drag and drop
+    setupFileUpload();
+    
+    // Form submission handler
+    const form = document.getElementById('contentForm');
+    if (form) {
+        form.addEventListener('submit', validateForm);
+    }
+});
+
+function selectContentType(type) {
+    console.log('Selecting content type:', type);
+    
+    // Update UI - remove selected class from all cards
+    const allCards = document.querySelectorAll('.content-type-card');
+    allCards.forEach(card => card.classList.remove('selected'));
+    
+    // Add selected class to clicked card
+    const selectedCard = document.querySelector(`[data-type="${type}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
+    }
+    
+    // Hide all form sections first
+    const allSections = document.querySelectorAll('.content-form-section');
+    allSections.forEach(section => section.classList.remove('active'));
+    
+    // Always show basic info
+    const basicInfo = document.getElementById('basic-info');
+    if (basicInfo) {
+        basicInfo.classList.add('active');
+    }
+    
+    // Set content type value
+    const contentTypeInput = document.getElementById('content_type');
+    if (contentTypeInput) {
+        contentTypeInput.value = type;
+    }
+    
+    // Show specific form based on type
+    if (['pdf', 'video', 'image', 'audio'].includes(type)) {
+        const fileUpload = document.getElementById('file-upload');
+        if (fileUpload) {
+            fileUpload.classList.add('active');
+        }
+        updateFileAccept(type);
+    } else if (type === 'youtube') {
+        const youtubeForm = document.getElementById('youtube-form');
+        if (youtubeForm) {
+            youtubeForm.classList.add('active');
+        }
+    } else if (type === 'link') {
+        const linkForm = document.getElementById('link-form');
+        if (linkForm) {
+            linkForm.classList.add('active');
+        }
+    } else if (type === 'text') {
+        const textForm = document.getElementById('text-form');
+        if (textForm) {
+            textForm.classList.add('active');
+        }
+    }
+    
+    // Show submit section
+    const submitSection = document.querySelector('.content-form-section:last-child');
+    if (submitSection) {
+        submitSection.classList.add('active');
+    }
+    
+    // Enable submit button
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+    }
+    
+    // Update file type text
+    const typeTexts = {
+        'pdf': 'PDF files (*.pdf)',
+        'video': 'Video files (*.mp4, *.avi, *.mov)',
+        'image': 'Image files (*.jpg, *.png, *.gif)',
+        'audio': 'Audio files (*.mp3, *.wav, *.m4a)'
+    };
+    const fileTypeText = document.getElementById('file-type-text');
+    if (fileTypeText) {
+        fileTypeText.textContent = typeTexts[type] || 'Select a file to upload';
+    }
+}
+
+function updateFileAccept(type) {
+    const accepts = {
+        'pdf': '.pdf',
+        'video': '.mp4,.avi,.mov,.wmv,.flv,.webm',
+        'image': '.jpg,.jpeg,.png,.gif,.bmp,.webp',
+        'audio': '.mp3,.wav,.m4a,.aac,.ogg'
+    };
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) {
+        fileInput.setAttribute('accept', accepts[type] || '');
+    }
+}
+
+function setupFileUpload() {
+    const uploadArea = document.querySelector('.file-upload-area');
+    if (!uploadArea) return;
+    
+    // Drag and drop events
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) {
+                fileInput.files = files;
+                handleFileSelect(fileInput);
+            }
+        }
+    });
+}
+
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const fileInfo = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-file fa-2x text-primary me-3"></i>
+            <div>
+                <strong>${file.name}</strong><br>
+                <small class="text-muted">
+                    Size: ${formatFileSize(file.size)} | 
+                    Type: ${file.type || 'Unknown'}
+                </small>
+            </div>
+        </div>
+    `;
+    
+    const fileInfoDiv = document.getElementById('file-info');
+    const filePreview = document.getElementById('file-preview');
+    
+    if (fileInfoDiv) {
+        fileInfoDiv.innerHTML = fileInfo;
+    }
+    if (filePreview) {
+        filePreview.style.display = 'block';
+    }
+    
+    // Show image preview if it's an image
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (fileInfoDiv) {
+                fileInfoDiv.innerHTML += `
+                    <div class="mt-3">
+                        <img src="${e.target.result}" class="img-fluid rounded" style="max-height: 200px;">
+                    </div>
+                `;
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function previewYouTube(url) {
+    const youtubePreview = document.getElementById('youtube-preview');
+    if (!url) {
+        if (youtubePreview) {
+            youtubePreview.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Extract video ID from YouTube URL
+    const videoId = extractYouTubeId(url);
+    if (videoId && youtubePreview) {
+        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        const iframe = youtubePreview.querySelector('iframe');
+        if (iframe) {
+            iframe.src = embedUrl;
+            youtubePreview.style.display = 'block';
+        }
+    } else {
+        if (youtubePreview) {
+            youtubePreview.style.display = 'none';
+        }
+        alert('Invalid YouTube URL. Please enter a valid YouTube video URL.');
+    }
+}
+
+function extractYouTubeId(url) {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+}
+
+function previewLink(url) {
+    const linkPreview = document.getElementById('link-preview');
+    const linkInfo = document.getElementById('link-info');
+    
+    if (!url) {
+        if (linkPreview) {
+            linkPreview.style.display = 'none';
+        }
+        return;
+    }
+    
+    const linkInfoHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-external-link-alt fa-2x text-info me-3"></i>
+            <div>
+                <strong>External Link</strong><br>
+                <small class="text-muted">${url}</small><br>
+                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-info mt-2">
+                    <i class="fas fa-eye"></i> Preview Link
+                </a>
+            </div>
+        </div>
+    `;
+    
+    if (linkInfo) {
+        linkInfo.innerHTML = linkInfoHTML;
+    }
+    if (linkPreview) {
+        linkPreview.style.display = 'block';
+    }
+}
+
+function validateForm(e) {
+    const contentType = document.getElementById('content_type').value;
+    
+    if (!contentType) {
+        alert('Please select a content type first.');
+        e.preventDefault();
+        return false;
+    }
+    
+    // Validate based on content type
+    let isValid = true;
+    let errorMessage = '';
+    
+    if (['pdf', 'video', 'image', 'audio'].includes(contentType)) {
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput ? fileInput.files[0] : null;
+        if (!file) {
+            isValid = false;
+            errorMessage = 'Please select a file to upload.';
+        } else if (file.size > 50 * 1024 * 1024) { // 50MB limit
+            isValid = false;
+            errorMessage = 'File size must be less than 50MB.';
+        }
+    } else if (contentType === 'youtube') {
+        const urlInput = document.querySelector('input[name="youtube_url"]');
+        const url = urlInput ? urlInput.value : '';
+        if (!url || !extractYouTubeId(url)) {
+            isValid = false;
+            errorMessage = 'Please enter a valid YouTube URL.';
+        }
+    } else if (contentType === 'link') {
+        const urlInput = document.querySelector('input[name="external_url"]');
+        const url = urlInput ? urlInput.value : '';
+        if (!url) {
+            isValid = false;
+            errorMessage = 'Please enter an external URL.';
+        }
+    } else if (contentType === 'text') {
+        const textInput = document.querySelector('textarea[name="text_content"]');
+        const text = textInput ? textInput.value : '';
+        if (!text.trim()) {
+            isValid = false;
+            errorMessage = 'Please enter some text content.';
+        }
+    }
+    
+    if (!isValid) {
+        alert(errorMessage);
+        e.preventDefault();
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        submitBtn.disabled = true;
+    }
+}
+</script>
+{% endblock %}

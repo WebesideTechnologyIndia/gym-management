@@ -43,7 +43,7 @@
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{% url 'plan_list' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                            <a href="{% url 'multiple_gym:plan_list' %}" class="btn btn-secondary me-md-2">Cancel</a>
                             <button type="submit" class="btn btn-primary">Create Plan</button>
                         </div>
                     </form>
@@ -52,5 +52,5 @@
         </div>
     </div>
 </div>
-<a href="{% url 'plan_list' %}" class="btn btn-secondary me-md-2">Plan List</a>
+<a href="{% url 'multiple_gym:plan_list' %}" class="btn btn-secondary me-md-2">Plan List</a>
 {% endblock %}

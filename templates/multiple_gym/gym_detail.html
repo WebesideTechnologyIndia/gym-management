@@ -9,11 +9,11 @@
             <ol class="breadcrumb">
                 {% if user.user_type == 'superadmin' %}
                 <li class="breadcrumb-item">
-                    <a href="{% url 'superadmin_dashboard' %}">Dashboard</a>
+                    <a href="{% url 'multiple_gym:superadmin_dashboard' %}">Dashboard</a>
                 </li>
                 {% elif user.user_type == 'gymadmin' %}
                 <li class="breadcrumb-item">
-                    <a href="{% url 'gymadmin_dashboard' gym_id %}">Dashboard</a>
+                    <a href="{% url 'multiple_gym:gymadmin_dashboard' gym_id %}">Dashboard</a>
                 </li>
                 {% endif %}
                 <li class="breadcrumb-item active">{{ gym.name }}</li>
@@ -89,7 +89,7 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Quick Actions</h5>
-                <a href="{% url 'add_member' gym.id %}" class="btn btn-primary btn-lg">
+                <a href="{% url 'multiple_gym:add_member' gym.id %}" class="btn btn-primary btn-lg">
                     <i class="fas fa-user-plus me-2"></i>Add New Member
                 </a>
             </div>
@@ -107,7 +107,7 @@
                     <i class="fas fa-users me-2"></i>Members List
                 </h5>
                 {% if user.user_type == 'gymadmin' %}
-                <a href="{% url 'add_member' gym.id %}" class="btn btn-sm btn-primary">
+                <a href="{% url 'multiple_gym:add_member' gym.id %}" class="btn btn-sm btn-primary">
                     <i class="fas fa-plus me-1"></i>Add Member
                 </a>
                 {% endif %}

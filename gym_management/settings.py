@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'multiple_gym',
     'inventory_management',
+    'trainer_management',
 ]
 
 # settings.py

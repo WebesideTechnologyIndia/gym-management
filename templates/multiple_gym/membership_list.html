@@ -9,7 +9,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>All Memberships</h2>
-        <a href="{% url 'create_membership' %}" class="btn btn-primary">Add New Membership</a>
+        <a href="{% url 'multiple_gym:create_membership' %}" class="btn btn-primary">Add New Membership</a>
     </div>
 
     {% if messages %}
@@ -48,7 +48,7 @@
                         {% endif %}
                     </td>   
                     <td>
-                        <a href="{% url 'payment_history' membership.pk %}" class="btn btn-sm btn-info">View</a>
+                        <a href="{% url 'multiple_gym:payment_history' membership.pk %}" class="btn btn-sm btn-info">View</a>
                     </td>
                 </tr>
                 {% empty %}

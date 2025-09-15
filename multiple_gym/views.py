@@ -18,19 +18,16 @@ from .forms import (
 
 User = get_user_model()
 
-
 @csrf_protect
 def login_view(request):
     print(f"=== LOGIN VIEW DEBUG ===")
-    print(f"User authenticated: { request.user.is_authenticated}")
+    print(f"User authenticated: {request.user.is_authenticated}")
     print(f"Request method: {request.method}")
     print(f"Request path: {request.path}")
 
     if request.user.is_authenticated:
         print(f"User: {request.user}")
-        print(
-            f"User type: {getattr(request.user, 'user_type', 'NO USER_TYPE ATTRIBUTE')}"
-        )
+        print(f"User type: {getattr(request.user, 'user_type', 'NO USER_TYPE ATTRIBUTE')}")
         print(f"User ID: {request.user.id}")
 
         # Check if user has user_type attribute
@@ -39,22 +36,25 @@ def login_view(request):
             print(f"Redirecting to dashboard for user_type: {user_type}")
 
             if user_type == "superadmin":
-                return redirect("superadmin_dashboard")
+                return redirect("multiple_gym:superadmin_dashboard")  # ADD NAMESPACE
             elif user_type == "gymadmin":
-                return redirect("gymadmin_home")  # Redirect to home first
+                return redirect("multiple_gym:gymadmin_home")  # ADD NAMESPACE
             elif user_type == "member":
                 print("Redirecting to member_dashboard")
-                return redirect("member_dashboard")
+                return redirect("multiple_gym:member_dashboard")  # ADD NAMESPACE
+            elif user_type == "trainer":
+                print("Redirecting to trainer_dashboard")
+                return redirect("trainer_management:trainer_dashboard")
             else:
                 print(f"Invalid user type: {user_type}")
                 logout(request)
                 messages.error(request, "Invalid user type. Please contact admin.")
-                return redirect("login")
+                return redirect("multiple_gym:login")  # ADD NAMESPACE
         else:
             print("User does not have user_type attribute")
             logout(request)
             messages.error(request, "User profile incomplete. Please contact admin.")
-            return redirect("login")
+            return redirect("multiple_gym:login")  # ADD NAMESPACE
 
     if request.method == "POST":
         form = CustomLoginForm(request, data=request.POST)
@@ -64,29 +64,27 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f"Welcome {user.username}!")
-                print(
-                    f"User logged in: {user.username}, type: {getattr(user, 'user_type', 'NO TYPE')}"
-                )
+                print(f"User logged in: {user.username}, type: {getattr(user, 'user_type', 'NO TYPE')}")
 
                 if hasattr(user, "user_type"):
                     if user.user_type == "superadmin":
-                        return redirect("superadmin_dashboard")
+                        return redirect("multiple_gym:superadmin_dashboard")  # ADD NAMESPACE
                     elif user.user_type == "gymadmin":
-                        return redirect("gymadmin_home")  # Redirect to home first
+                        return redirect("multiple_gym:gymadmin_home")  # ADD NAMESPACE
                     elif user.user_type == "member":
-                        return redirect("member_dashboard")
+                        return redirect("multiple_gym:member_dashboard")  # ADD NAMESPACE
+                    elif user.user_type == "trainer":
+                        print("Redirecting to trainer_dashboard after login")
+                        return redirect("trainer_management:trainer_dashboard")
                     else:
+                        print(f"Invalid user type in POST: {user.user_type}")
                         logout(request)
-                        messages.error(
-                            request, "Invalid user type. Please contact admin."
-                        )
-                        return redirect("login")
+                        messages.error(request, "Invalid user type. Please contact admin.")
+                        return redirect("multiple_gym:login")  # ADD NAMESPACE
                 else:
                     logout(request)
-                    messages.error(
-                        request, "User profile incomplete. Please contact admin."
-                    )
-                    return redirect("login")
+                    messages.error(request, "User profile incomplete. Please contact admin.")
+                    return redirect("multiple_gym:login")  # ADD NAMESPACE
         else:
             messages.error(request, "Invalid username or password.")
     else:
@@ -99,7 +97,7 @@ def logout_view(request):
     print(f"=== LOGOUT VIEW ===")
     logout(request)
     messages.success(request, "Successfully logged out!")
-    return redirect("login")
+    return redirect("multiple_gym:login")
 
 
 @login_required
@@ -167,7 +165,7 @@ def gymadmin_home(request):
         gym_admin = GymAdmin.objects.get(user=request.user)
         first_gym = gym_admin.gyms.first()
         if first_gym:
-            return redirect("gymadmin_dashboard", gym_id=first_gym.id)
+            return redirect("multiple_gym:gymadmin_dashboard", gym_id=first_gym.id)
         else:
             messages.error(request, "No gyms assigned to you yet.")
             return redirect("login")
@@ -224,23 +222,43 @@ import string
 
 User = get_user_model()
 
-
 @login_required
 def add_member(request, gym_id):
-    if request.user.user_type != "gymadmin":
+    """Add new member - supports both gym admin and trainer access"""
+    
+    # Check user type permissions
+    if request.user.user_type not in ["gymadmin", "trainer"]:
         messages.error(request, "Access denied!")
-        return redirect("login")
+        return redirect("multiple_gym:login")
 
     gym = get_object_or_404(Gym, id=gym_id)
 
-    try:
-        gym_admin = GymAdmin.objects.get(user=request.user)
-        if gym not in gym_admin.gyms.all():
-            messages.error(request, "You do not have access to this gym!")
-            return redirect("gymadmin_dashboard", gym_id=gym.id)
-    except GymAdmin.DoesNotExist:
-        messages.error(request, "Gym admin profile not found!")
-        return redirect("login")
+    # Permission checks based on user type
+    if request.user.user_type == "gymadmin":
+        try:
+            gym_admin = GymAdmin.objects.get(user=request.user)
+            if gym not in gym_admin.gyms.all():
+                messages.error(request, "You do not have access to this gym!")
+                return redirect("multiple_gym:gymadmin_dashboard", gym_id=gym.id)
+        except GymAdmin.DoesNotExist:
+            messages.error(request, "Gym admin profile not found!")
+            return redirect("multiple_gym:login")
+    
+    elif request.user.user_type == "trainer":
+        try:
+            # Import here to avoid circular imports
+            from trainer_management.models import Trainer
+            
+            trainer = Trainer.objects.get(user=request.user, gym=gym, is_active=True)
+            
+            # Check if trainer has permission to create members
+            if not trainer.permissions.can_create_members:
+                messages.error(request, "You don't have permission to create members!")
+                return redirect("trainer_management:trainer_dashboard")
+                
+        except Trainer.DoesNotExist:
+            messages.error(request, "Trainer profile not found or not authorized for this gym!")
+            return redirect("trainer_management:trainer_dashboard")
 
     if request.method == "POST":
         form = MemberCreationForm(request.POST, request.FILES)
@@ -251,8 +269,16 @@ def add_member(request, gym_id):
                 messages.error(
                     request, f"A member with phone number {phone} already exists!"
                 )
-                context = {"form": form, "gym": gym, "gym_id": gym.id}
-                return render(request, "multiple_gym/add_member.html", context)
+                context = {
+                    "form": form, 
+                    "gym": gym, 
+                    "gym_id": gym.id,
+                    "user_type": request.user.user_type,
+                    "is_trainer": request.user.user_type == "trainer"
+                }
+                # Use different template based on user type
+                template_name = "trainer_management/add_member.html" if request.user.user_type == "trainer" else "multiple_gym/add_member.html"
+                return render(request, template_name, context)
 
             try:
                 with transaction.atomic():
@@ -319,14 +345,39 @@ def add_member(request, gym_id):
 
                     member = Member.objects.create(**member_data)
 
+                    # If trainer created the member, auto-assign them
+                    if request.user.user_type == "trainer":
+                        from trainer_management.models import MemberTrainerAssignment
+                        
+                        trainer = Trainer.objects.get(user=request.user, gym=gym)
+                        
+                        # Create automatic assignment
+                        MemberTrainerAssignment.objects.create(
+                            member=member,
+                            trainer=trainer,
+                            assignment_type='fitness',  # Default assignment type
+                            goals='New member - initial assessment required',
+                            notes=f'Auto-assigned when member was created by {trainer.user.get_full_name()}',
+                            created_by=request.user
+                        )
+
                     success_msg = (
                         f'Member "{form.cleaned_data["username"]}" added successfully!'
                     )
                     if not form.cleaned_data.get("password"):
                         success_msg += f" Generated password: {password}"
+                    
+                    # Add trainer-specific message
+                    if request.user.user_type == "trainer":
+                        success_msg += " Member has been automatically assigned to you."
 
                     messages.success(request, success_msg)
-                    return redirect("gym_detail", gym_id=gym.id)
+                    
+                    # Redirect based on user type
+                    if request.user.user_type == "gymadmin":
+                        return redirect("multiple_gym:gym_detail", gym_id=gym.id)
+                    else:  # trainer
+                        return redirect("trainer_management:trainer_member_list")
 
             except Exception as e:
                 messages.error(request, f"Error creating member: {str(e)}")
@@ -337,15 +388,27 @@ def add_member(request, gym_id):
     else:
         form = MemberCreationForm()
 
-    context = {"form": form, "gym": gym, "gym_id": gym.id}
-    return render(request, "multiple_gym/add_member.html", context)
-
-
+    context = {
+        "form": form, 
+        "gym": gym, 
+        "gym_id": gym.id,
+        "user_type": request.user.user_type,
+        "is_trainer": request.user.user_type == "trainer",
+        "title": "Add New Member"
+    }
+    
+    # Choose template based on user type
+    if request.user.user_type == "trainer":
+        return render(request, "trainer_management/add_member.html", context)
+    else:
+        return render(request, "multiple_gym/add_member.html", context)
+    
+    
 @login_required
 def gym_detail(request, gym_id):
     gym = get_object_or_404(Gym, id=gym_id)
 
-    # Check access permissions
+    # Check access permissions - UPDATED to include trainer
     if request.user.user_type == "gymadmin":
         try:
             gym_admin = GymAdmin.objects.get(user=request.user)
@@ -353,6 +416,17 @@ def gym_detail(request, gym_id):
                 messages.error(request, "Access denied!")
                 return redirect("gymadmin_home")
         except GymAdmin.DoesNotExist:
+            messages.error(request, "Access denied!")
+            return redirect("login")
+    elif request.user.user_type == "trainer":
+        # ADD TRAINER PERMISSION CHECK
+        try:
+            from trainer_management.models import Trainer  # Import trainer model
+            trainer = Trainer.objects.get(user=request.user)
+            if trainer.gym.id != gym_id:
+                messages.error(request, "Access denied! You can only view your assigned gym.")
+                return redirect("trainer_management:trainer_dashboard")
+        except Trainer.DoesNotExist:
             messages.error(request, "Access denied!")
             return redirect("login")
     elif request.user.user_type != "superadmin":
@@ -371,100 +445,320 @@ def gym_detail(request, gym_id):
     }
     return render(request, "multiple_gym/gym_detail.html", context)
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from decimal import Decimal
+from datetime import date, timedelta
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from decimal import Decimal
+from datetime import date, timedelta
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from decimal import Decimal
+from datetime import date, timedelta
 
 @login_required
 def member_dashboard(request):
     if request.user.user_type != "member":
         messages.error(request, "Access denied!")
-        return redirect("login")
-
+        return redirect("multiple_gym:login")
+    
     try:
         member = Member.objects.get(user=request.user)
         
-        # Get ALL memberships
+        # Get ALL memberships ordered by most recent first
         all_memberships = Membership.objects.filter(member_name=member).order_by("-start_date")
         
-        print(f"Debug - Total memberships: {all_memberships.count()}")
-        
-        # Debug each membership
-        for mem in all_memberships:
-            print(f"Membership: {mem.plan.name}")
-            print(f"Start: {mem.start_date}, End: {mem.end_date}")
-            print(f"Status: {mem.membership_status}, Active: {mem.is_active}")
-            print("---")
-
-        # Get active membership - SIMPLE approach
-        from datetime import date
+        # Get current date
         today = date.today()
         
-        # Method 1: Find by date range (most reliable)
+        # Find the CURRENTLY ACTIVE membership (overlapping with today's date)
         active_membership = all_memberships.filter(
             start_date__lte=today,
-            end_date__gte=today
+            end_date__gte=today,
+            is_active=True
         ).first()
         
-        print(f"Active membership found: {active_membership}")
+        # If no active membership found, check if there's any active membership regardless of dates
+        if not active_membership:
+            active_membership = all_memberships.filter(is_active=True).first()
         
-        # If found, update its status
+        # Calculate membership status and days remaining
+        days_remaining = 0
+        membership_status = "No Active Membership"
+        
         if active_membership:
-            active_membership.membership_status = 'active'
-            active_membership.is_active = True
-            active_membership.save()
-            
-            days_remaining = (active_membership.end_date - today).days
-            membership_status = "Active"
-        else:
-            days_remaining = 0
-            membership_status = "No Active Membership"
-
-        # Calculate payments
-        from decimal import Decimal
+            if active_membership.end_date >= today:
+                days_remaining = (active_membership.end_date - today).days
+                membership_status = "Active"
+            else:
+                membership_status = "Expired"
+                days_remaining = 0
         
-        # Get payments from Payment model
+        # Create a list with membership data including calculated fields
+        memberships_with_data = []
+        for membership in all_memberships:
+            # Calculate status based on current date
+            if membership.start_date <= today <= membership.end_date:
+                if membership.is_active:
+                    current_status = "active"
+                else:
+                    current_status = "inactive"
+            elif membership.end_date < today:
+                current_status = "expired"
+            else:
+                current_status = "upcoming"
+            
+            # Calculate payment percentage
+            payment_percentage = 0
+            if membership.total_amount > 0:
+                payment_percentage = (membership.paid_amount / membership.total_amount) * 100
+            
+            # Calculate days remaining for this membership
+            membership_days_remaining = 0
+            if membership.end_date >= today:
+                membership_days_remaining = (membership.end_date - today).days
+            
+            # Create a dictionary with all the data we need
+            memberships_with_data.append({
+                'membership': membership,
+                'current_status': current_status,
+                'payment_percentage': round(payment_percentage, 1),
+                'days_remaining': membership_days_remaining
+            })
+        
+        # Payment calculations
         all_payments = Payment.objects.filter(membership__member_name=member)
         total_paid = sum(p.amount for p in all_payments) if all_payments.exists() else Decimal('0')
         
-        # Calculate due amount
-        total_due = sum(m.remaining_amount for m in all_memberships)
-
-        # Recent payments
-        recent_payments = all_payments.order_by('-payment_date')[:5]
-
-        # Stats
-        total_memberships = all_memberships.count()
-        expired_memberships = all_memberships.filter(end_date__lt=today).count()
-        active_memberships = 1 if active_membership else 0
-
-        # Payment percentage
+        # Calculate total due across all memberships with outstanding balances
+        total_due = sum(m.remaining_amount for m in all_memberships if m.remaining_amount > 0)
+        
+        # Recent payments for display (last 10)
+        recent_payments = all_payments.order_by('-payment_date')[:10]
+        
+        # Payment percentage for active membership
         payment_percentage = 0
         if active_membership and active_membership.total_amount > 0:
             payment_percentage = (active_membership.paid_amount / active_membership.total_amount) * 100
-
+        
+        # ===== TRAINING SESSIONS DATA =====
+        # Initialize all variables with default values first
+        todays_sessions = []
+        upcoming_sessions = []
+        available_sessions = []
+        active_sessions_count = 0
+        recent_attendance = []
+        missed_sessions_list = []
+        total_sessions_enrolled = 0
+        attended_sessions = 0
+        missed_sessions = 0
+        attendance_rate = 0
+        enrolled_sessions = []
+        
+        # Try to load session data
+        try:
+            from trainer_management.models import SessionParticipant, TrainingSession
+            
+            # Get member's enrolled sessions
+            enrolled_sessions = SessionParticipant.objects.filter(
+                member=member, 
+                is_enrolled=True
+            ).select_related('session', 'session__trainer')
+            
+            # Today's sessions
+            todays_sessions = enrolled_sessions.filter(session__session_date=today)
+            
+            # Upcoming sessions (future dates only, ordered by date)
+            upcoming_sessions = enrolled_sessions.filter(
+                session__session_date__gt=today
+            ).order_by('session__session_date', 'session__start_time')
+            
+            # Available sessions to join (not enrolled, future dates)
+            available_sessions = TrainingSession.objects.filter(
+                trainer__gym=member.gym,
+                session_date__gte=today,
+                status='scheduled'
+            ).exclude(
+                id__in=enrolled_sessions.values_list('session_id', flat=True)
+            )[:5]
+            
+            # Total active sessions count
+            active_sessions_count = enrolled_sessions.filter(
+                session__status__in=['scheduled', 'active']
+            ).count()
+            
+            # Recent attendance records (completed sessions only)
+            recent_attendance = SessionParticipant.objects.filter(
+                member=member,
+                attended=True,
+                session__session_date__lt=today
+            ).select_related(
+                'session', 
+                'session__trainer'
+            ).prefetch_related(
+                'session__content_materials'
+            ).order_by('-session__session_date')[:15]
+            
+            # 🔥 FIXED: Missed sessions (enrolled but didn't attend past sessions)
+            missed_sessions_list = SessionParticipant.objects.filter(
+                member=member,
+                is_enrolled=True,  # Must be enrolled
+                attended=False,    # But didn't attend
+                session__session_date__lt=today  # Past sessions only
+            ).select_related(
+                'session', 
+                'session__trainer'
+            ).prefetch_related(
+                'session__content_materials'
+            ).order_by('-session__session_date')
+            
+            # Debug: Print missed sessions count
+            missed_count = missed_sessions_list.count()
+            print(f"DEBUG: Found {missed_count} missed sessions for member {member.user.username}")
+            
+            # 🔥 FIXED: Attendance statistics - count ALL enrolled sessions with past dates
+            all_past_enrolled_sessions = enrolled_sessions.filter(
+                session__session_date__lt=today
+            )
+            
+            total_sessions_enrolled = all_past_enrolled_sessions.count()
+            attended_sessions = all_past_enrolled_sessions.filter(attended=True).count()
+            missed_sessions = all_past_enrolled_sessions.filter(attended=False).count()
+            
+            print(f"DEBUG: Attendance stats - Total Past: {total_sessions_enrolled}, Attended: {attended_sessions}, Missed: {missed_sessions}")
+            
+            if total_sessions_enrolled > 0:
+                attendance_rate = (attended_sessions / total_sessions_enrolled) * 100
+        
+        except ImportError:
+            # If trainer_management app is not available, use default values
+            print("Trainer management app not available - using default session values")
+        except Exception as e:
+            # Handle any other errors
+            print(f"Error loading session data: {e}")
+        
+        # ===== MEMBERSHIP STATISTICS =====
+        total_memberships = all_memberships.count()
+        expired_memberships = all_memberships.filter(end_date__lt=today).count()
+        active_memberships_count = all_memberships.filter(
+            start_date__lte=today,
+            end_date__gte=today,
+            is_active=True
+        ).count()
+        
+        # ===== PAYMENT SUMMARY =====
+        total_payments_made = all_payments.count()
+        payment_completion_rate = 0
+        
+        # Calculate overall payment completion rate across all memberships
+        total_membership_amount = sum(m.total_amount for m in all_memberships if m.total_amount > 0)
+        total_paid_amount = sum(m.paid_amount for m in all_memberships if m.paid_amount > 0)
+        
+        if total_membership_amount > 0:
+            payment_completion_rate = (total_paid_amount / total_membership_amount) * 100
+        
+        # Outstanding payments - memberships with remaining balance
+        outstanding_payments = all_memberships.filter(
+            remaining_amount__gt=0
+        ).order_by('-start_date')
+        
+        # ===== ENHANCED MEMBER STATS =====
+        current_weight = getattr(member, 'current_weight', 75)
+        target_weight = getattr(member, 'target_weight', 70)
+        height = getattr(member, 'height', 170)
+        
+        # Calculate BMI if height and weight are available
+        bmi = 22.5  # Default
+        if hasattr(member, 'height') and hasattr(member, 'current_weight'):
+            if member.height and member.current_weight:
+                height_m = member.height / 100
+                bmi = round(member.current_weight / (height_m ** 2), 1)
+        
+        body_fat_percentage = getattr(member, 'body_fat_percentage', 15)
+        
         context = {
+            # Member & Gym Info
             "member": member,
             "gym": member.gym,
+            "today": today,
+            
+            # Membership Data
             "active_membership": active_membership,
             "all_memberships": all_memberships,
-            "recent_payments": recent_payments,
+            "memberships_with_data": memberships_with_data,
             "days_remaining": days_remaining,
             "membership_status": membership_status,
-            "total_paid": total_paid,
-            "total_due": total_due,
-            "payment_percentage": payment_percentage,
             "total_memberships": total_memberships,
             "expired_memberships": expired_memberships,
-            "active_memberships": active_memberships,
+            "active_memberships_count": active_memberships_count,
+            
+            # Payment Data
+            "total_paid": total_paid,
+            "total_due": total_due,
+            "recent_payments": recent_payments,
+            "payment_percentage": round(payment_percentage, 1),
+            "total_payments_made": total_payments_made,
+            "payment_completion_rate": round(payment_completion_rate, 1),
+            "outstanding_payments": outstanding_payments,
+            
+            # Session Data
+            "todays_sessions": todays_sessions,
+            "upcoming_sessions": upcoming_sessions,
+            "available_sessions": available_sessions,
+            "active_sessions_count": active_sessions_count,
+            "enrolled_sessions": enrolled_sessions,
+            
+            # Attendance Data
+            "recent_attendance": recent_attendance,
+            "missed_sessions_list": missed_sessions_list,
+            "total_sessions_enrolled": total_sessions_enrolled,
+            "attended_sessions": attended_sessions,
+            "missed_sessions": missed_sessions,
+            "attendance_rate": round(attendance_rate, 1),
+            
+            # Progress Data
+            "current_weight": current_weight,
+            "target_weight": target_weight,
+            "bmi": bmi,
+            "body_fat_percentage": body_fat_percentage,
         }
         
         return render(request, "multiple_gym/member_dashboard.html", context)
-
+        
+    except Member.DoesNotExist:
+        messages.error(request, "Member profile not found!")
+        return redirect("multiple_gym:login")
     except Exception as e:
-        print(f"Error: {e}")
-        messages.error(request, f"Error: {str(e)}")
-        return redirect("login")
+        print(f"Error in member dashboard: {e}")
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f"Error loading dashboard: {str(e)}")
+        return redirect("multiple_gym:login")
 
+
+# Add logout view
+@login_required
+def logout_view(request):
+    from django.contrib.auth import logout
+    logout(request)
+    messages.success(request, "Successfully logged out!")
+    return redirect("multiple_gym:login")
+
+
+# Add logout view
+@login_required
+def logout_view(request):
+    from django.contrib.auth import logout
+    logout(request)
+    messages.success(request, "Successfully logged out!")
+    return redirect("multiple_gym:login")
 
 
 
@@ -734,7 +1028,7 @@ def create_membership(request):
                         )
 
                     messages.success(request, success_msg)
-                    return redirect("membership_list")
+                    return redirect("multiple_gym:membership_list")
 
             except Exception as e:
                 messages.error(request, f"Error creating membership: {str(e)}")

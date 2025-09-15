@@ -13,7 +13,7 @@
                     <p class="text-muted">Sign in to your account</p>
                 </div>
 
-                <form method="post" action="{% url 'login' %}">
+                <form method="post" action="{% url 'multiple_gym:login' %}">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="{{ form.username.id_for_label }}" class="form-label">

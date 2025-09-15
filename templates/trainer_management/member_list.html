@@ -1,0 +1,619 @@
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}My Members{% endblock %}
+
+{% block extra_css %}
+<style>
+.member-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.member-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.member-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.member-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid white;
+    object-fit: cover;
+}
+
+.member-info {
+    padding: 20px;
+}
+
+.assignment-badge {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.progress-ring {
+    width: 60px;
+    height: 60px;
+    position: relative;
+}
+
+.progress-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+
+.progress-bg {
+    stroke: #e9ecef;
+}
+
+.progress-bar {
+    stroke: #28a745;
+    stroke-dasharray: 157;
+    stroke-dashoffset: 157;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    border: none;
+    margin-bottom: 20px;
+}
+
+.action-btn {
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.member-goals {
+    background: #f8f9ff;
+    border-left: 4px solid #667eea;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #dee2e6;
+}
+
+.filter-section {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.search-box {
+    border-radius: 25px;
+    border: 1px solid #dee2e6;
+    padding: 10px 20px;
+}
+
+.search-box:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Members Header -->
+    <div class="member-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-users"></i> My Assigned Members</h2>
+                <p class="mb-0">Manage and track your member assignments and training progress</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="d-flex justify-content-center align-items-center">
+                    <div class="bg-white text-dark rounded-circle p-3 me-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                        <div>
+                            <h3 class="mb-0">{{ assignments.count }}</h3>
+                            <small>Members</small>
+                        </div>
+                    </div>
+                    <a href="{% url 'multiple_gym:add_member' gym.id %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-user-plus"></i> Add Member
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h3 class="text-primary">{{ assignments.count }}</h3>
+                <p class="mb-0 text-muted">Total Members</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-dumbbell fa-2x text-success mb-2"></i>
+                <h3 class="text-success">{{ assignments|length }}</h3>
+                <p class="mb-0 text-muted">Active Assignments</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-calendar-check fa-2x text-warning mb-2"></i>
+                <h3 class="text-warning">0</h3>
+                <p class="mb-0 text-muted">Sessions This Week</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-trophy fa-2x text-info mb-2"></i>
+                <h3 class="text-info">0</h3>
+                <p class="mb-0 text-muted">Goals Achieved</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control search-box border-start-0" 
+                           placeholder="Search members..." id="memberSearch">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select search-box" id="assignmentFilter">
+                    <option value="">All Assignment Types</option>
+                    <option value="weight_loss">Weight Loss</option>
+                    <option value="muscle_gain">Muscle Gain</option>
+                    <option value="fitness">General Fitness</option>
+                    <option value="strength">Strength Training</option>
+                    <option value="cardio">Cardio Training</option>
+                    <option value="rehabilitation">Rehabilitation</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select search-box" id="sortBy">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="name">Name A-Z</option>
+                    <option value="name_desc">Name Z-A</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100 action-btn" onclick="clearFilters()">
+                    <i class="fas fa-undo"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members Grid -->
+    <div class="row" id="membersGrid">
+        {% for assignment in assignments %}
+        <div class="col-md-6 col-lg-4 mb-4 member-item" 
+             data-name="{{ assignment.member.user.get_full_name|lower }}"
+             data-assignment-type="{{ assignment.assignment_type }}"
+             data-date="{{ assignment.assigned_date|date:'Y-m-d' }}">
+            
+            <div class="card member-card h-100">
+                <!-- Member Header -->
+                <div class="member-info">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if assignment.member.photo %}
+                            <img src="{{ assignment.member.photo.url }}" class="member-avatar me-3" alt="Profile">
+                        {% else %}
+                            <div class="member-avatar bg-light d-flex align-items-center justify-content-center me-3">
+                                <i class="fas fa-user fa-lg text-secondary"></i>
+                            </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">{{ assignment.member.user.get_full_name }}</h5>
+                            <p class="text-muted small mb-1">
+                                <i class="fas fa-phone"></i> {{ assignment.member.phone|default:"No phone" }}
+                            </p>
+                            <span class="badge bg-primary">{{ assignment.member.get_membership_type_display|default:"Standard" }}</span>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="viewMemberProfile({{ assignment.member.id }})">
+                                        <i class="fas fa-user"></i> View Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'trainer_management:create_session' %}?member={{ assignment.member.id }}">
+                                        <i class="fas fa-plus"></i> Create Session
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="updateGoals({{ assignment.id }})">
+                                        <i class="fas fa-target"></i> Update Goals
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-warning" href="#" onclick="editAssignment({{ assignment.id }})">
+                                        <i class="fas fa-edit"></i> Edit Assignment
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="assignment-badge">{{ assignment.get_assignment_type_display }}</span>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-plus"></i> {{ assignment.assigned_date|date:"M d, Y" }}
+                        </small>
+                    </div>
+
+                    <!-- Goals -->
+                    {% if assignment.goals %}
+                    <div class="member-goals">
+                        <h6 class="text-primary mb-2"><i class="fas fa-bullseye"></i> Goals:</h6>
+                        <p class="small mb-0">{{ assignment.goals|truncatechars:120 }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Progress Stats -->
+                    <div class="row text-center mt-3">
+                        <div class="col-4">
+                            <div class="progress-ring mx-auto">
+                                <svg>
+                                    <circle class="progress-bg" cx="30" cy="30" r="25"></circle>
+                                    <circle class="progress-bar" cx="30" cy="30" r="25" style="stroke-dashoffset: 120;"></circle>
+                                </svg>
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <strong>0</strong>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1">Sessions</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="progress-ring mx-auto">
+                                <svg>
+                                    <circle class="progress-bg" cx="30" cy="30" r="25"></circle>
+                                    <circle class="progress-bar" cx="30" cy="30" r="25" style="stroke-dashoffset: 95; stroke: #ffc107;"></circle>
+                                </svg>
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <strong>0%</strong>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1">Attendance</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="progress-ring mx-auto">
+                                <svg>
+                                    <circle class="progress-bg" cx="30" cy="30" r="25"></circle>
+                                    <circle class="progress-bar" cx="30" cy="30" r="25" style="stroke-dashoffset: 110; stroke: #17a2b8;"></circle>
+                                </svg>
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <strong>0%</strong>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1">Progress</small>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    {% if assignment.notes %}
+                    <div class="mt-3">
+                        <h6 class="text-info"><i class="fas fa-sticky-note"></i> Notes:</h6>
+                        <p class="small text-muted mb-0">{{ assignment.notes|truncatechars:100 }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card-footer bg-transparent border-0">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary action-btn flex-fill" onclick="createSession({{ assignment.member.id }})">
+                            <i class="fas fa-plus"></i> New Session
+                        </button>
+                        <button class="btn btn-outline-info action-btn flex-fill" onclick="viewProgress({{ assignment.member.id }})">
+                            <i class="fas fa-chart-line"></i> Progress
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="empty-state">
+                <i class="fas fa-user-friends"></i>
+                <h4>No Members Assigned Yet</h4>
+                <p class="text-muted mb-4">You don't have any members assigned to you yet. Ask your gym admin to assign members or add new members yourself.</p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="{% url 'multiple_gym:add_member' gym.id %}" class="btn btn-primary action-btn">
+                        <i class="fas fa-user-plus"></i> Add New Member
+                    </a>
+                    <a href="{% url 'trainer_management:trainer_dashboard' %}" class="btn btn-outline-secondary action-btn">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if assignments.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if assignments.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ assignments.previous_page_number }}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for page_num in assignments.paginator.page_range %}
+                {% if page_num == assignments.number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if assignments.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ assignments.next_page_number }}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Update Goals Modal -->
+<div class="modal fade" id="updateGoalsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Member Goals</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="" id="updateGoalsForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Assignment Type</label>
+                            <select class="form-control" name="assignment_type" id="modal_assignment_type">
+                                <option value="weight_loss">Weight Loss</option>
+                                <option value="muscle_gain">Muscle Gain</option>
+                                <option value="fitness">General Fitness</option>
+                                <option value="strength">Strength Training</option>
+                                <option value="cardio">Cardio Training</option>
+                                <option value="rehabilitation">Rehabilitation</option>
+                                <option value="sport_specific">Sport Specific</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Priority Level</label>
+                            <select class="form-control" name="priority">
+                                <option value="low">Low Priority</option>
+                                <option value="medium" selected>Medium Priority</option>
+                                <option value="high">High Priority</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fitness Goals</label>
+                        <textarea class="form-control" name="goals" rows="4" id="modal_goals" 
+                                  placeholder="Enter specific fitness goals..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Training Notes</label>
+                        <textarea class="form-control" name="notes" rows="3" id="modal_notes" 
+                                  placeholder="Additional training notes..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Goals</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Member Profile Modal -->
+<div class="modal fade" id="memberProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Member Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="memberProfileContent">
+                <!-- Content will be loaded via AJAX -->
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Search functionality
+    $('#memberSearch').on('keyup', function() {
+        filterMembers();
+    });
+    
+    $('#assignmentFilter, #sortBy').on('change', function() {
+        filterMembers();
+    });
+    
+    function filterMembers() {
+        const searchTerm = $('#memberSearch').val().toLowerCase();
+        const assignmentType = $('#assignmentFilter').val();
+        const sortBy = $('#sortBy').val();
+        
+        let memberItems = $('.member-item').toArray();
+        
+        // Filter
+        memberItems.forEach(item => {
+            const $item = $(item);
+            const memberName = $item.data('name');
+            const memberAssignment = $item.data('assignment-type');
+            
+            let show = true;
+            
+            if (searchTerm && !memberName.includes(searchTerm)) {
+                show = false;
+            }
+            
+            if (assignmentType && memberAssignment !== assignmentType) {
+                show = false;
+            }
+            
+            $item.toggle(show);
+        });
+        
+        // Sort visible items
+        const visibleItems = memberItems.filter(item => $(item).is(':visible'));
+        
+        visibleItems.sort((a, b) => {
+            const $a = $(a);
+            const $b = $(b);
+            
+            switch(sortBy) {
+                case 'newest':
+                    return new Date($b.data('date')) - new Date($a.data('date'));
+                case 'oldest':
+                    return new Date($a.data('date')) - new Date($b.data('date'));
+                case 'name':
+                    return $a.data('name').localeCompare($b.data('name'));
+                case 'name_desc':
+                    return $b.data('name').localeCompare($a.data('name'));
+                default:
+                    return 0;
+            }
+        });
+        
+        // Reorder DOM elements
+        const $grid = $('#membersGrid');
+        visibleItems.forEach(item => {
+            $grid.append(item);
+        });
+    }
+});
+
+function clearFilters() {
+    $('#memberSearch').val('');
+    $('#assignmentFilter').val('');
+    $('#sortBy').val('newest');
+    $('.member-item').show();
+}
+
+function createSession(memberId) {
+    window.location.href = `{% url 'trainer_management:create_session' %}?member=${memberId}`;
+}
+
+function viewProgress(memberId) {
+    window.location.href = `/trainer/members/${memberId}/progress/`;
+}
+
+function viewMemberProfile(memberId) {
+    $('#memberProfileModal').modal('show');
+    
+    // Load member profile via AJAX
+    fetch(`/trainer/ajax/member/${memberId}/profile/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#memberProfileContent').html(data.html);
+            } else {
+                $('#memberProfileContent').html('<div class="alert alert-danger">Error loading member profile</div>');
+            }
+        })
+        .catch(error => {
+            $('#memberProfileContent').html('<div class="alert alert-danger">Error loading member profile</div>');
+        });
+}
+
+function updateGoals(assignmentId) {
+    // Load current assignment data
+    fetch(`/trainer/ajax/assignment/${assignmentId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#modal_assignment_type').val(data.assignment_type);
+                $('#modal_goals').val(data.goals);
+                $('#modal_notes').val(data.notes);
+                $('#updateGoalsForm').attr('action', `/trainer/assignments/${assignmentId}/update/`);
+                $('#updateGoalsModal').modal('show');
+            }
+        });
+}
+
+function editAssignment(assignmentId) {
+    if (confirm('Are you sure you want to edit this assignment?')) {
+        updateGoals(assignmentId);
+    }
+}
+</script>
+{% endblock %}

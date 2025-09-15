@@ -1,0 +1,591 @@
+<!-- # 3. trainer_permissions.html - Trainer permissions manage karne ka page -->
+
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Manage Permissions - {{ trainer.user.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.permission-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.permission-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.permission-toggle {
+    transform: scale(1.5);
+}
+
+.permission-section {
+    border-left: 4px solid #0d6efd;
+    padding-left: 20px;
+    margin-bottom: 30px;
+}
+
+.permission-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.permission-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+}
+
+.danger-zone {
+    border: 2px dashed #dc3545;
+    border-radius: 10px;
+    padding: 20px;
+    background: #fff5f5;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-key"></i> Manage Permissions</h2>
+            <p class="text-muted">Configure permissions for {{ trainer.user.get_full_name }}</p>
+        </div>
+        <div>
+            <a href="{% url 'trainer_management:trainer_detail' gym.id trainer.id %}" class="btn btn-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <button type="submit" form="permissionsForm" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <form method="post" id="permissionsForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Member Management Permissions -->
+                <div class="permission-section">
+                    <h4><i class="fas fa-users text-primary"></i> Member Management</h4>
+                    <p class="text-muted">Control access to member-related functions</p>
+                    
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-primary text-white">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Create Members</h6>
+                                <small class="text-muted">Allow trainer to add new members to the gym</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_create_members" id="can_create_members"
+                                   {% if permissions.can_create_members %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-info text-white">
+                                <i class="fas fa-user-edit"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Edit Members</h6>
+                                <small class="text-muted">Allow trainer to modify member information</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_edit_members" id="can_edit_members"
+                                   {% if permissions.can_edit_members %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-warning text-white">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">View All Members</h6>
+                                <small class="text-muted">Access to view all gym members (not just assigned ones)</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_view_all_members" id="can_view_all_members"
+                                   {% if permissions.can_view_all_members %}checked{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Management Permissions -->
+                <div class="permission-section">
+                    <h4><i class="fas fa-calendar text-success"></i> Session Management</h4>
+                    <p class="text-muted">Control access to session-related functions</p>
+                    
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-success text-white">
+                                <i class="fas fa-calendar-plus"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Create Sessions</h6>
+                                <small class="text-muted">Allow trainer to schedule new sessions</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_create_sessions" id="can_create_sessions"
+                                   {% if permissions.can_create_sessions %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-primary text-white">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Manage Sessions</h6>
+                                <small class="text-muted">Edit, cancel, or modify existing sessions</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_manage_sessions" id="can_manage_sessions"
+                                   {% if permissions.can_manage_sessions %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-info text-white">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Mark Attendance</h6>
+                                <small class="text-muted">Record member attendance for sessions</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_mark_attendance" id="can_mark_attendance"
+                                   {% if permissions.can_mark_attendance %}checked{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Management Permissions -->
+                <div class="permission-section">
+                    <h4><i class="fas fa-file-alt text-warning"></i> Content Management</h4>
+                    <p class="text-muted">Control access to content and materials</p>
+                    
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-warning text-white">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Upload Content</h6>
+                                <small class="text-muted">Upload PDFs, images, and other materials</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_upload_content" id="can_upload_content"
+                                   {% if permissions.can_upload_content %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-danger text-white">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Add Video Links</h6>
+                                <small class="text-muted">Add YouTube and other video links to sessions</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_add_videos" id="can_add_videos"
+                                   {% if permissions.can_add_videos %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-secondary text-white">
+                                <i class="fas fa-edit"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Manage Content</h6>
+                                <small class="text-muted">Edit and delete existing content</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_manage_content" id="can_manage_content"
+                                   {% if permissions.can_manage_content %}checked{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reporting Permissions -->
+                <div class="permission-section">
+                    <h4><i class="fas fa-chart-bar text-info"></i> Reports & Analytics</h4>
+                    <p class="text-muted">Control access to reports and analytics</p>
+                    
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-info text-white">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">View Reports</h6>
+                                <small class="text-muted">Access to trainer and member reports</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_view_reports" id="can_view_reports"
+                                   {% if permissions.can_view_reports %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-purple text-white">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Export Data</h6>
+                                <small class="text-muted">Download reports and member data</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_export_data" id="can_export_data"
+                                   {% if permissions.can_export_data %}checked{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Permissions -->
+                <div class="permission-section">
+                    <h4><i class="fas fa-cogs text-secondary"></i> Advanced Permissions</h4>
+                    <p class="text-muted">Advanced access controls</p>
+                    
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-secondary text-white">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Access Full Calendar</h6>
+                                <small class="text-muted">View all gym sessions in calendar (not just own sessions)</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_access_full_calendar" id="can_access_full_calendar"
+                                   {% if permissions.can_access_full_calendar %}checked{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="permission-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="permission-icon bg-dark text-white">
+                                <i class="fas fa-user-cog"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Manage Profile</h6>
+                                <small class="text-muted">Edit own trainer profile and settings</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input permission-toggle" type="checkbox" 
+                                   name="can_manage_profile" id="can_manage_profile"
+                                   {% if permissions.can_manage_profile %}checked{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="danger-zone">
+                    <h5 class="text-danger"><i class="fas fa-exclamation-triangle"></i> Danger Zone</h5>
+                    <p class="text-muted">These actions cannot be undone. Please be certain.</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6>Suspend Trainer Access</h6>
+                            <small class="text-muted">Temporarily disable all trainer permissions</small>
+                        </div>
+                        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#suspendModal">
+                            Suspend Access
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6>Remove Trainer</h6>
+                            <small class="text-muted">Permanently remove trainer from gym</small>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#removeModal">
+                            Remove Trainer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-md-4">
+                <!-- Permission Summary -->
+                <div class="card permission-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> Permission Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Trainer:</strong> {{ trainer.user.get_full_name }}<br>
+                            <strong>Employee ID:</strong> {{ trainer.employee_id }}<br>
+                            <strong>Status:</strong> 
+                            <span class="badge bg-{{ trainer.status|yesno:'success,warning' }}">
+                                {{ trainer.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="permission-stats">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Active Permissions:</span>
+                                <strong id="activePermissionsCount">{{ active_permissions_count }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Permissions:</span>
+                                <strong>{{ total_permissions_count }}</strong>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ permissions_percentage }}%" 
+                                     id="permissionsProgress">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card permission-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-success" onclick="enableAllPermissions()">
+                                <i class="fas fa-check-double"></i> Enable All
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" onclick="enableBasicPermissions()">
+                                <i class="fas fa-check"></i> Basic Permissions
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="disableAllPermissions()">
+                                <i class="fas fa-times"></i> Disable All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Permission History -->
+                <div class="card permission-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history"></i> Recent Changes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if permission_history %}
+                            {% for change in permission_history %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <small class="text-muted">{{ change.timestamp|date:"M d, H:i" }}</small><br>
+                                    <strong>{{ change.permission_name }}</strong>
+                                    <span class="badge bg-{{ change.action|yesno:'success,danger' }}">
+                                        {{ change.action|yesno:'Granted,Revoked' }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">by {{ change.changed_by.get_full_name }}</small>
+                            </div>
+                            <hr>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No recent changes</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Suspend Modal -->
+<div class="modal fade" id="suspendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Suspend Trainer Access
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to suspend access for <strong>{{ trainer.user.get_full_name }}</strong>?</p>
+                <p class="text-muted">This will:</p>
+                <ul class="text-muted">
+                    <li>Disable all trainer permissions temporarily</li>
+                    <li>Prevent login to trainer dashboard</li>
+                    <li>Keep all data intact</li>
+                    <li>Can be reversed later</li>
+                </ul>
+                
+              
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Suspend Access</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Modal -->
+<div class="modal fade" id="removeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-trash"></i> Remove Trainer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                
+                <p>Are you sure you want to remove <strong>{{ trainer.user.get_full_name }}</strong>?</p>
+                <p class="text-muted">This will:</p>
+                <ul class="text-muted">
+                    <li>Permanently delete trainer from gym</li>
+                    <li>Remove all permissions</li>
+                    <li>Unassign all members</li>
+                    <li>Cancel all future sessions</li>
+                </ul>
+                
+                <div class="mb-3">
+                    <label class="form-label">Type <strong>REMOVE</strong> to confirm:</label>
+                    <input type="text" class="form-control" id="confirmRemoval" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRemoveBtn" disabled>
+                    Remove Trainer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Update permission count when checkboxes change
+    $('.permission-toggle').change(function() {
+        updatePermissionStats();
+    });
+    
+    // Quick action functions
+    window.enableAllPermissions = function() {
+        $('.permission-toggle').prop('checked', true);
+        updatePermissionStats();
+    };
+    
+    window.enableBasicPermissions = function() {
+        $('.permission-toggle').prop('checked', false);
+        $('#can_create_sessions, #can_mark_attendance, #can_upload_content, #can_manage_profile').prop('checked', true);
+        updatePermissionStats();
+    };
+    
+    window.disableAllPermissions = function() {
+        $('.permission-toggle').prop('checked', false);
+        updatePermissionStats();
+    };
+    
+    // Update permission statistics
+    function updatePermissionStats() {
+        const totalPermissions = $('.permission-toggle').length;
+        const activePermissions = $('.permission-toggle:checked').length;
+        const percentage = (activePermissions / totalPermissions) * 100;
+        
+        $('#activePermissionsCount').text(activePermissions);
+        $('#permissionsProgress').css('width', percentage + '%');
+    }
+    
+    // Confirm removal validation
+    $('#confirmRemoval').on('input', function() {
+        const confirmBtn = $('#confirmRemoveBtn');
+        if ($(this).val() === 'REMOVE') {
+            confirmBtn.prop('disabled', false);
+        } else {
+            confirmBtn.prop('disabled', true);
+        }
+    });
+    
+    // Handle form submission
+    $('#permissionsForm').submit(function(e) {
+        const activePermissions = $('.permission-toggle:checked').length;
+        if (activePermissions === 0) {
+            if (!confirm('You are about to remove all permissions. The trainer will not be able to access any features. Continue?')) {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        // Show loading state
+        $('button[type="submit"]').html('<i class="fas fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+    });
+    
+    // Initialize permission stats
+    updatePermissionStats();
+});
+</script>
+
+<style>
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+</style>
+{% endblock %}

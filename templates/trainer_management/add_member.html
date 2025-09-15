@@ -1,0 +1,554 @@
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}Add New Member{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #0d6efd;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .section-header h6 {
+        color: #0d6efd;
+        font-weight: 600;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    
+    .required-field {
+        color: #dc3545;
+    }
+    
+    .photo-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .photo-upload-area:hover {
+        border-color: #0d6efd;
+        background: #e7f3ff;
+    }
+    
+    .photo-upload-area i {
+        font-size: 2rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .trainer-alert {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border: none;
+    }
+    
+    .trainer-alert i {
+        font-size: 1.5rem;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-plus"></i> Add New Member</h2>
+            <p class="text-muted">Add a new member to your training list at {{ gym.name }}</p>
+        </div>
+        <a href="{% url 'trainer_management:trainer_member_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Members
+        </a>
+    </div>
+
+    <!-- Trainer Specific Alert -->
+    <div class="trainer-alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Trainer Note:</strong> Members you create will be automatically assigned to you for training. You can modify their goals and training plan after registration.
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>Member Registration Form
+                    </h4>
+                    <p class="mb-0 opacity-75">Add new member to {{ gym.name }}</p>
+                </div>
+
+                <div class="card-body p-4">
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="memberForm" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Account Information Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h6><i class="fas fa-user-circle me-2"></i>Account Information</h6>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                            First Name <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.first_name }}
+                                        {% if form.first_name.errors %}
+                                        <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                            Last Name <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.last_name }}
+                                        {% if form.last_name.errors %}
+                                        <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                                            Username <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.username }}
+                                        {% if form.username.errors %}
+                                        <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                                            Email <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.email }}
+                                        {% if form.email.errors %}
+                                        <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.password.id_for_label }}" class="form-label">
+                                            Password <span class="required-field">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.password }}
+                                            <button class="btn btn-outline-secondary password-toggle" type="button" id="togglePassword">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        {% if form.password.errors %}
+                                        <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.confirm_password.id_for_label }}" class="form-label">
+                                            Confirm Password <span class="required-field">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.confirm_password }}
+                                            <button class="btn btn-outline-secondary password-toggle" type="button" id="toggleConfirmPassword">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        {% if form.confirm_password.errors %}
+                                        <div class="text-danger small mt-1">{{ form.confirm_password.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Personal Information Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h6><i class="fas fa-id-card me-2"></i>Personal Information</h6>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">
+                                            Date of Birth <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.date_of_birth }}
+                                        {% if form.date_of_birth.errors %}
+                                        <div class="text-danger small mt-1">{{ form.date_of_birth.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.gender.id_for_label }}" class="form-label">
+                                            Gender <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.gender }}
+                                        {% if form.gender.errors %}
+                                        <div class="text-danger small mt-1">{{ form.gender.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.blood_group.id_for_label }}" class="form-label">
+                                            Blood Group
+                                        </label>
+                                        {{ form.blood_group }}
+                                        {% if form.blood_group.errors %}
+                                        <div class="text-danger small mt-1">{{ form.blood_group.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                            Phone Number <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.phone }}
+                                        {% if form.phone.errors %}
+                                        <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.alternate_phone.id_for_label }}" class="form-label">
+                                            Alternate Phone
+                                        </label>
+                                        {{ form.alternate_phone }}
+                                        {% if form.alternate_phone.errors %}
+                                        <div class="text-danger small mt-1">{{ form.alternate_phone.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Photo Upload Section -->
+                            <div class="mb-3">
+                                <label class="form-label">Member Photo</label>
+                                <div class="photo-upload-area" onclick="document.getElementById('{{ form.photo.id_for_label }}').click()">
+                                    <i class="fas fa-camera"></i>
+                                    <p class="mb-0">Click to upload photo</p>
+                                    <small class="text-muted">Supported formats: JPG, PNG, GIF (Max 5MB)</small>
+                                </div>
+                                <input type="file" class="d-none" {{ form.photo.field.widget.attrs|safe }} name="{{ form.photo.name }}" id="{{ form.photo.id_for_label }}">
+                                {% if form.photo.errors %}
+                                <div class="text-danger small mt-1">{{ form.photo.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Address Information Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h6><i class="fas fa-map-marker-alt me-2"></i>Address Information</h6>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.address_line1.id_for_label }}" class="form-label">
+                                            Address Line 1 <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.address_line1 }}
+                                        {% if form.address_line1.errors %}
+                                        <div class="text-danger small mt-1">{{ form.address_line1.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.address_line2.id_for_label }}" class="form-label">
+                                            Address Line 2
+                                        </label>
+                                        {{ form.address_line2 }}
+                                        {% if form.address_line2.errors %}
+                                        <div class="text-danger small mt-1">{{ form.address_line2.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.city.id_for_label }}" class="form-label">
+                                            City <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.city }}
+                                        {% if form.city.errors %}
+                                        <div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.state.id_for_label }}" class="form-label">
+                                            State <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.state }}
+                                        {% if form.state.errors %}
+                                        <div class="text-danger small mt-1">{{ form.state.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.pin_code.id_for_label }}" class="form-label">
+                                            PIN Code <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.pin_code }}
+                                        {% if form.pin_code.errors %}
+                                        <div class="text-danger small mt-1">{{ form.pin_code.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h6><i class="fas fa-phone me-2"></i>Emergency Contact Information</h6>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.emergency_contact_name.id_for_label }}" class="form-label">
+                                            Contact Name <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.emergency_contact_name }}
+                                        {% if form.emergency_contact_name.errors %}
+                                        <div class="text-danger small mt-1">{{ form.emergency_contact_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.emergency_contact_phone.id_for_label }}" class="form-label">
+                                            Contact Phone <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.emergency_contact_phone }}
+                                        {% if form.emergency_contact_phone.errors %}
+                                        <div class="text-danger small mt-1">{{ form.emergency_contact_phone.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.emergency_contact_relation.id_for_label }}" class="form-label">
+                                            Relationship <span class="required-field">*</span>
+                                        </label>
+                                        {{ form.emergency_contact_relation }}
+                                        {% if form.emergency_contact_relation.errors %}
+                                        <div class="text-danger small mt-1">{{ form.emergency_contact_relation.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.emergency_contact_address.id_for_label }}" class="form-label">
+                                    Contact Address
+                                </label>
+                                {{ form.emergency_contact_address }}
+                                {% if form.emergency_contact_address.errors %}
+                                <div class="text-danger small mt-1">{{ form.emergency_contact_address.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Medical Information Section (Optional for trainers) -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h6><i class="fas fa-heartbeat me-2"></i>Medical Information (Optional)</h6>
+                                <small class="text-muted">This information helps in creating safe workout plans</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.medical_conditions.id_for_label }}" class="form-label">
+                                            Medical Conditions
+                                        </label>
+                                        {{ form.medical_conditions }}
+                                        {% if form.medical_conditions.errors %}
+                                        <div class="text-danger small mt-1">{{ form.medical_conditions.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.medications.id_for_label }}" class="form-label">
+                                            Current Medications
+                                        </label>
+                                        {{ form.medications }}
+                                        {% if form.medications.errors %}
+                                        <div class="text-danger small mt-1">{{ form.medications.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.previous_injuries.id_for_label }}" class="form-label">
+                                            Previous Injuries
+                                        </label>
+                                        {{ form.previous_injuries }}
+                                        {% if form.previous_injuries.errors %}
+                                        <div class="text-danger small mt-1">{{ form.previous_injuries.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-success btn-lg me-3" style="background: linear-gradient(135deg, #28a745, #20c997); border: none; padding: 0.75rem 2rem;">
+                                <i class="fas fa-user-plus me-2"></i>Add Member & Assign to Me
+                            </button>
+                            <a href="{% url 'trainer_management:trainer_member_list' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password visibility toggle
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.querySelector('input[name="password"]');
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('fa-eye');
+            this.querySelector('i').classList.toggle('fa-eye-slash');
+        });
+    }
+
+    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+    const confirmPasswordInput = document.querySelector('input[name="confirm_password"]');
+    
+    if (toggleConfirmPassword && confirmPasswordInput) {
+        toggleConfirmPassword.addEventListener('click', function() {
+            const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmPasswordInput.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('fa-eye');
+            this.querySelector('i').classList.toggle('fa-eye-slash');
+        });
+    }
+
+    // Photo upload preview
+    const photoInput = document.querySelector('input[name="photo"]');
+    const uploadArea = document.querySelector('.photo-upload-area');
+    
+    if (photoInput && uploadArea) {
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadArea.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 0.5rem;">
+                        <p class="mb-0 mt-2">Click to change photo</p>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Form validation
+    const form = document.getElementById('memberForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = form.querySelectorAll('input[required], select[required]');
+            let hasErrors = false;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    hasErrors = true;
+                } else {
+                    field.classList.remove('is-invalid');
+                    field.classList.add('is-valid');
+                }
+            });
+
+            // Password matching validation
+            const password = document.querySelector('input[name="password"]');
+            const confirmPassword = document.querySelector('input[name="confirm_password"]');
+            
+            if (password && confirmPassword && password.value !== confirmPassword.value) {
+                confirmPassword.classList.add('is-invalid');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
+                e.preventDefault();
+                // Scroll to first error
+                const firstError = form.querySelector('.is-invalid');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

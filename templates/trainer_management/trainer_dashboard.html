@@ -1,0 +1,642 @@
+<!-- trainer_management/templates/trainer_management/trainer_dashboard.html -->
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.stat-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.stat-card .card-body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card:nth-child(2) .card-body {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-card:nth-child(3) .card-body {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-card:nth-child(4) .card-body {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.session-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.session-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.zoom-session {
+    border-left: 4px solid #2D8CFF;
+    background: rgba(45, 140, 255, 0.02);
+}
+
+.zoom-badge {
+    background: linear-gradient(45deg, #2D8CFF, #1E6FFF);
+    color: white;
+    border-radius: 15px;
+    padding: 2px 8px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.quick-action-btn {
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.member-card {
+    border: none;
+    border-radius: 8px;
+    background: #f8f9fa;
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.member-card:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.session-time-badge {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8em;
+}
+
+.status-badge {
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="fas fa-tachometer-alt"></i> Welcome, {{ trainer.user.get_full_name }}
+        </h1>
+        <p class="text-muted">{{ trainer.gym.name }} - {{ trainer.specialization }}</p>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'trainer_management:create_session' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Session
+            </a>
+            <a href="{% url 'trainer_management:session_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> View All
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h3>{{ total_assigned_members }}</h3>
+                <p class="mb-0">Assigned Members</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-day fa-2x mb-2"></i>
+                <h3>{{ total_sessions_today }}</h3>
+                <p class="mb-0">Today's Sessions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-week fa-2x mb-2"></i>
+                <h3>{{ total_sessions_this_week }}</h3>
+                <p class="mb-0">This Week</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h3>{{ completed_sessions_this_month }}</h3>
+                <p class="mb-0">Completed (Month)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Today's Sessions with Zoom Support -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock"></i> Today's Sessions
+                </h5>
+                <div>
+                    <span class="badge bg-primary me-2">{{ today_sessions.count }} Total</span>
+                    <span class="badge bg-info">{{ today_zoom_sessions }} Zoom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if today_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Session</th>
+                                    <th>Type</th>
+                                    <th>Participants</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in today_sessions %}
+                                <tr class="{% if session.is_zoom_session %}zoom-session{% endif %}">
+                                    <td>
+                                        <span class="session-time-badge">
+                                            {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'trainer_management:session_detail' session.id %}" class="text-decoration-none">
+                                            <strong>{{ session.title }}</strong>
+                                        </a>
+                                        {% if session.is_zoom_session %}
+                                            <br><span class="zoom-badge"><i class="fas fa-video"></i> Zoom</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ session.get_session_type_display }}</span>
+                                        {% if session.is_zoom_session %}
+                                            <br><small class="text-muted">ID: {{ session.zoom_meeting_id }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span>{{ session.participants_count }}/{{ session.max_participants }}</span>
+                                            <div class="ms-2">
+                                                {% for participant in session.participants.all|slice:":2" %}
+                                                    <div class="participant-dot bg-{% if session.is_zoom_session %}{% if participant.zoom_joined %}success{% elif participant.zoom_notified %}warning{% else %}secondary{% endif %}{% else %}primary{% endif %}" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 2px;"></div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge bg-{% if session.status == 'completed' %}success{% elif session.status == 'active' %}warning{% else %}info{% endif %}">
+                                            {{ session.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'trainer_management:session_detail' session.id %}" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if session.status == 'scheduled' %}
+                                                {% if session.is_zoom_session %}
+                                                    <button class="btn btn-success btn-sm" onclick="startZoomSession({{ session.id }})">
+                                                        <i class="fas fa-video"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-success btn-sm" onclick="startRegularSession({{ session.id }})">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                {% endif %}
+                                            {% elif session.status == 'active' %}
+                                                {% if session.is_zoom_session %}
+                                                    <button class="btn btn-info btn-sm" onclick="manageZoomSession({{ session.id }})">
+                                                        <i class="fas fa-cogs"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <a href="{% url 'trainer_management:mark_attendance' session.id %}" class="btn btn-warning btn-sm">
+                                                        <i class="fas fa-check"></i>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-times fa-3x mb-3 text-muted"></i>
+                        <h5>No sessions scheduled for today</h5>
+                        <p>Create your first session to get started!</p>
+                        <a href="{% url 'trainer_management:create_session' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Session
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Sidebar -->
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'trainer_management:create_session' %}" class="btn btn-primary quick-action-btn">
+                        <i class="fas fa-plus me-2"></i> Create Session
+                    </a>
+                    <a href="{% url 'trainer_management:create_session' %}?type=online" class="btn btn-info quick-action-btn">
+                        <i class="fas fa-video me-2"></i> Create Zoom Session
+                    </a>
+                    <a href="{% url 'trainer_management:session_list' %}" class="btn btn-outline-primary quick-action-btn">
+                        <i class="fas fa-list me-2"></i> All Sessions
+                    </a>
+                    <a href="{% url 'trainer_management:trainer_member_list' %}" class="btn btn-outline-success quick-action-btn">
+                        <i class="fas fa-users me-2"></i> My Members
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Session Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Quick Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ upcoming_zoom_sessions }}</h4>
+                        <small class="text-muted">Upcoming Zoom</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ active_sessions }}</h4>
+                        <small class="text-muted">Active Now</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Members -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-users"></i> My Members
+                </h5>
+                <span class="badge bg-primary">{{ assigned_members.count }}</span>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                {% if assigned_members %}
+                    {% for assignment in assigned_members %}
+                    <div class="member-card">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="flex-grow-1">
+                                <strong>{{ assignment.member.user.get_full_name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-tag"></i> {{ assignment.get_assignment_type_display }}
+                                    <span class="ms-2">
+                                        <i class="fas fa-calendar"></i> {{ assignment.assigned_date|date:"M d" }}
+                                    </span>
+                                </small>
+                            </div>
+                            <div>
+                                <a href="{% url 'trainer_management:trainer_member_list' %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if assigned_members.count > 5 %}
+                    <div class="text-center mt-2">
+                        <a href="{% url 'trainer_management:trainer_member_list' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-users"></i> View All Members ({{ total_assigned_members }})
+                        </a>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-user-slash fa-2x mb-2"></i>
+                        <p class="mb-0">No members assigned yet</p>
+                        <small>Contact your gym admin to get members assigned</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Upcoming Sessions with Zoom -->
+{% if upcoming_sessions %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-plus"></i> Upcoming Sessions
+                </h5>
+                <div>
+                    <span class="badge bg-info me-1">{{ upcoming_sessions.count }} Total</span>
+                    <span class="badge bg-primary">{{ upcoming_zoom_sessions }} Zoom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for session in upcoming_sessions %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card session-card h-100 {% if session.is_zoom_session %}zoom-session{% endif %}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title">{{ session.title }}</h6>
+                                    {% if session.is_zoom_session %}
+                                        <span class="zoom-badge"><i class="fas fa-video"></i></span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-calendar"></i> {{ session.session_date|date:"M d, Y" }}
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-clock"></i> {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-users"></i> {{ session.participants_count }}/{{ session.max_participants }}
+                                        {% if session.is_zoom_session %}
+                                            <span class="ms-1 text-info">
+                                                (<i class="fas fa-video"></i> Online)
+                                            </span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="status-badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'active' %}warning{% else %}success{% endif %}">
+                                        {{ session.get_status_display }}
+                                    </span>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'trainer_management:session_detail' session.id %}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if session.is_zoom_session %}
+                                            <button class="btn btn-info btn-sm" onclick="prepareZoomSession({{ session.id }})">
+                                                <i class="fas fa-cog"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Zoom Session Modal (same as before) -->
+<div class="modal fade" id="zoomSessionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: linear-gradient(135deg, #2D8CFF 0%, #1E6FFF 100%); color: white;">
+            <div class="modal-header border-0">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-video fa-2x me-3"></i>
+                    <div>
+                        <h4 class="modal-title mb-0">Zoom Session Management</h4>
+                        <small class="text-light" id="zoomSessionTitle">Loading...</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="zoomModalContent">
+                <div class="text-center">
+                    <div class="spinner-border text-white" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading session data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dashboard functionality
+$(document).ready(function() {
+    // Auto-refresh dashboard every 5 minutes
+    setInterval(function() {
+        location.reload();
+    }, 300000);
+    
+    // Real-time clock
+    function updateClock() {
+        const now = new Date();
+        const time = now.toLocaleTimeString();
+        document.title = `Dashboard - ${time}`;
+    }
+    
+    updateClock();
+    setInterval(updateClock, 1000);
+});
+
+// Zoom session management functions
+function startZoomSession(sessionId) {
+    loadZoomSessionData(sessionId);
+}
+
+function manageZoomSession(sessionId) {
+    loadZoomSessionData(sessionId);  
+}
+
+function prepareZoomSession(sessionId) {
+    loadZoomSessionData(sessionId);
+}
+
+function loadZoomSessionData(sessionId) {
+    const modal = new bootstrap.Modal(document.getElementById('zoomSessionModal'));
+    modal.show();
+    
+    fetch(`/trainer/sessions/${sessionId}/zoom-data/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            updateZoomModal(data, sessionId);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('zoomModalContent').innerHTML = 
+                `<div class="alert alert-danger">Error loading session data: ${error.message}</div>`;
+        });
+}
+
+function updateZoomModal(data, sessionId) {
+    document.getElementById('zoomSessionTitle').textContent = data.session.title;
+    
+    const modalContent = `
+        <div style="background: rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 20px; margin: 20px 0;">
+            <h6><i class="fas fa-link me-2"></i>Meeting Details</h6>
+            <p><strong>Meeting ID:</strong> ${data.zoom.meeting_id}</p>
+            <p><strong>Password:</strong> ${data.zoom.password}</p>
+            <p><strong>Duration:</strong> ${data.session.duration} minutes</p>
+        </div>
+        
+        <div class="d-flex w-100 gap-2 mt-3">
+            <button class="btn btn-light flex-fill" onclick="notifyParticipants(${sessionId})">
+                <i class="fas fa-bell"></i> Notify All
+            </button>
+            <button class="btn btn-warning flex-fill" onclick="joinZoomMeeting(${sessionId})">
+                <i class="fas fa-video"></i> Join Meeting  
+            </button>
+            <button class="btn btn-success flex-fill" onclick="startAndRecord(${sessionId})">
+                <i class="fas fa-record-vinyl"></i> Start & Record
+            </button>
+        </div>
+    `;
+    
+    document.getElementById('zoomModalContent').innerHTML = modalContent;
+}
+
+// Regular session start
+function startRegularSession(sessionId) {
+    if (confirm('Are you sure you want to start this session?')) {
+        fetch(`/trainer/sessions/${sessionId}/start/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Session started successfully!');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('Error: ' + data.error);
+            }
+        });
+    }
+}
+
+// Zoom helper functions
+function notifyParticipants(sessionId) {
+    fetch(`/trainer/sessions/${sessionId}/notify-participants/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message);
+        } else {
+            showToast('Error: ' + data.error);
+        }
+    });
+}
+
+function joinZoomMeeting(sessionId) {
+    fetch(`/trainer/sessions/${sessionId}/join-zoom/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Opening Zoom meeting...');
+                window.open(data.web_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('zoomSessionModal'));
+                    modal.hide();
+                    location.reload();
+                }, 2000);
+            } else {
+                showToast('Error: ' + data.error);
+            }
+        });
+}
+
+function startAndRecord(sessionId) {
+    fetch(`/trainer/sessions/${sessionId}/start-zoom/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Session started with recording!');
+            joinZoomMeeting(sessionId);
+        } else {
+            showToast('Error: ' + data.error);
+        }
+    });
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast show position-fixed top-0 end-0 m-3';
+    toast.innerHTML = `
+        <div class="toast-body bg-success text-white">
+            ${message}
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

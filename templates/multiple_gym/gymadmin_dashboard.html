@@ -82,10 +82,10 @@
                                 </div>
 
                                 <div class="d-grid gap-2">
-                                    <a href="{% url 'gym_detail' gym.id %}" class="btn btn-outline-primary">
+                                    <a href="{% url 'multiple_gym:gym_detail' gym.id %}" class="btn btn-outline-primary">
                                         <i class="fas fa-eye me-2"></i>View Details
                                     </a>
-                                    <a href="{% url 'add_member' gym.id %}" class="btn btn-primary">
+                                    <a href="{% url 'multiple_gym:add_member' gym.id %}" class="btn btn-primary">
                                         <i class="fas fa-user-plus me-2"></i>Add Member
                                     </a>
                                 </div>

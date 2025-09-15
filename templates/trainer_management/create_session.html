@@ -1,0 +1,354 @@
+<!-- trainer_management/templates/trainer_management/create_session.html -->
+<!-- UPDATED WITH MANUAL ZOOM CONTROL -->
+
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}Create Training Session{% endblock %}
+
+{% block extra_css %}
+<style>
+.zoom-section {
+    background: linear-gradient(135deg, #2D8CFF 0%, #1E6FFF 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.zoom-features {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.online-session-indicator {
+    border-left: 4px solid #2D8CFF;
+    padding-left: 15px;
+}
+
+.zoom-toggle-card {
+    border: 2px solid #2D8CFF;
+    border-radius: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(45, 140, 255, 0.1) 0%, rgba(30, 111, 255, 0.05) 100%);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-plus"></i> Create New Training Session</h5>
+                </div>
+                <form method="POST" class="card-body">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Session Title *</label>
+                                <input type="text" class="form-control" name="title" required>
+                            </div>
+                            
+                            <!-- UPDATED: Remove Online option from session type -->
+                            <div class="mb-3">
+                                <label class="form-label">Session Type *</label>
+                                <select class="form-control" name="session_type" id="sessionType" required>
+                                    <option value="individual">Individual Training</option>
+                                    <option value="group">Group Training</option>
+                                    <option value="class">Fitness Class</option>
+                                    <option value="assessment">Fitness Assessment</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <!-- Date & Time -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Session Date *</label>
+                                <input type="date" class="form-control" name="session_date" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Start Time *</label>
+                                        <input type="time" class="form-control" name="start_time" required>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">End Time *</label>
+                                        <input type="time" class="form-control" name="end_time" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Duration (minutes)</label>
+                                <input type="number" class="form-control" name="duration_minutes" value="60" min="15" max="480">
+                                <small class="text-muted">Auto-calculated from start/end time</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Manual Zoom Toggle -->
+                    <div class="mb-4">
+                        <div class="zoom-toggle-card">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="is_zoom_session" id="zoomToggle" style="width: 3em; height: 1.5em;">
+                                <label class="form-check-label" for="zoomToggle">
+                                    <i class="fas fa-video me-2"></i><strong>Enable Zoom Meeting</strong>
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1">
+                                Check this to create an online session with Zoom integration for any session type
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- ZOOM SECTION - Shows when checkbox is checked -->
+                    <div id="zoomSection" class="zoom-section" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-video fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-0">Zoom Session Configuration</h5>
+                                <small>This session will be conducted online via Zoom</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="zoom-features">
+                                    <h6><i class="fas fa-check me-2"></i>Automatic Features</h6>
+                                    <ul class="mb-0">
+                                        <li>Meeting ID & Password generation</li>
+                                        <li>Participant email notifications</li>
+                                        <li>Web-based joining (no app required)</li>
+                                        <li>Optional session recording</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="zoom_recording_enabled" id="zoomRecording" checked>
+                                    <label class="form-check-label" for="zoomRecording">
+                                        Enable automatic recording
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="zoomNotifications" checked>
+                                    <label class="form-check-label" for="zoomNotifications">
+                                        Send email invitations to participants
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3" style="background: rgba(255,255,255,0.1); border: none; color: white;">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Meeting details will be generated automatically after session creation. Participants will receive email invitations with join links.
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Session Configuration -->
+                        <div class="col-md-6">
+                            <div class="mb-3" id="locationField">
+                                <label class="form-label">Location/Venue</label>
+                                <input type="text" class="form-control" name="location" placeholder="Room number or area">
+                                <small class="text-muted">Will be set to "Online - Zoom Meeting" for Zoom sessions</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Maximum Participants</label>
+                                <input type="number" class="form-control" name="max_participants" value="1" min="1">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Difficulty Level</label>
+                                <select class="form-control" name="difficulty_level">
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                    <option value="expert">Expert</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Exercise Planning -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Equipment Needed</label>
+                                <input type="text" class="form-control" name="equipment_needed" placeholder="Dumbbells, Mat, etc.">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Workout Plan</label>
+                                <textarea class="form-control" name="workout_plan" rows="4" placeholder="Brief workout description"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exercise Details -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Warm-up Exercises</label>
+                                <textarea class="form-control" name="warm_up_exercises" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Main Exercises</label>
+                                <textarea class="form-control" name="main_exercises" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Cool-down Exercises</label>
+                                <textarea class="form-control" name="cool_down_exercises" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Participants Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Participants</label>
+                        <div class="row">
+                            {% for assignment in assigned_members %}
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="participants" 
+                                           value="{{ assignment.member.id }}" id="member{{ assignment.member.id }}">
+                                    <label class="form-check-label" for="member{{ assignment.member.id }}">
+                                        {{ assignment.member.user.get_full_name }}
+                                        <small class="text-muted d-block">{{ assignment.get_assignment_type_display }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="col-12">
+                                <p class="text-muted">No assigned members found. Session will be created without participants.</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Pre-session Notes -->
+                    <div class="mb-3">
+                        <label class="form-label">Pre-session Notes</label>
+                        <textarea class="form-control" name="pre_session_notes" rows="2" 
+                                  placeholder="Any special notes or instructions for this session"></textarea>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Create Session
+                        </button>
+                        <a href="{% url 'trainer_management:session_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// NEW: Handle manual Zoom toggle
+document.getElementById('zoomToggle').addEventListener('change', function() {
+    const isChecked = this.checked;
+    const zoomSection = document.getElementById('zoomSection');
+    const locationField = document.getElementById('locationField');
+    const locationInput = locationField.querySelector('input[name="location"]');
+    
+    if (isChecked) {
+        // Show Zoom section
+        zoomSection.style.display = 'block';
+        
+        // Update location for Zoom
+        if (!locationInput.value || locationInput.value === '') {
+            locationInput.value = 'Online - Zoom Meeting';
+        }
+        locationField.classList.add('online-session-indicator');
+        locationField.querySelector('small').textContent = 'Location set to online for Zoom session';
+        
+    } else {
+        // Hide Zoom section
+        zoomSection.style.display = 'none';
+        
+        // Reset location if it was set to Zoom
+        if (locationInput.value === 'Online - Zoom Meeting') {
+            locationInput.value = '';
+        }
+        locationField.classList.remove('online-session-indicator');
+        locationField.querySelector('small').textContent = 'Will be set to "Online - Zoom Meeting" for Zoom sessions';
+    }
+});
+
+// Auto-calculate duration when start/end times change
+function calculateDuration() {
+    const startTime = document.querySelector('input[name="start_time"]').value;
+    const endTime = document.querySelector('input[name="end_time"]').value;
+    
+    if (startTime && endTime) {
+        const start = new Date(`1970-01-01T${startTime}:00`);
+        const end = new Date(`1970-01-01T${endTime}:00`);
+        
+        if (end > start) {
+            const diffMs = end - start;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            document.querySelector('input[name="duration_minutes"]').value = diffMinutes;
+        }
+    }
+}
+
+document.querySelector('input[name="start_time"]').addEventListener('change', calculateDuration);
+document.querySelector('input[name="end_time"]').addEventListener('change', calculateDuration);
+
+// Set minimum date to today
+document.querySelector('input[name="session_date"]').min = new Date().toISOString().split('T')[0];
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const startTime = document.querySelector('input[name="start_time"]').value;
+    const endTime = document.querySelector('input[name="end_time"]').value;
+    const isZoomSession = document.getElementById('zoomToggle').checked;
+    
+    if (startTime && endTime) {
+        const start = new Date(`1970-01-01T${startTime}:00`);
+        const end = new Date(`1970-01-01T${endTime}:00`);
+        
+        if (end <= start) {
+            e.preventDefault();
+            alert('End time must be after start time!');
+            return false;
+        }
+    }
+    
+    // Show confirmation for Zoom sessions
+    if (isZoomSession) {
+        if (!confirm('This will create a Zoom session with automatic meeting generation. Continue?')) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+</script>
+{% endblock %}

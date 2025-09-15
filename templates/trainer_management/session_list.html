@@ -1,0 +1,700 @@
+<!-- trainer_management/templates/trainer_management/session_list.html -->
+<!-- COMPLETE WORKING VERSION WITH DIRECT START -->
+
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}My Sessions{% endblock %}
+
+{% block extra_css %}
+<style>
+.session-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.session-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.session-status {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+
+.session-time {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50px;
+    padding: 5px 15px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* ZOOM SESSION STYLES */
+.zoom-session-badge {
+    background: linear-gradient(45deg, #2D8CFF, #1E6FFF);
+    color: white;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.online-session {
+    border-left: 4px solid #2D8CFF;
+}
+
+.zoom-actions {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.zoom-modal {
+    background: linear-gradient(135deg, #2D8CFF 0%, #1E6FFF 100%);
+    color: white;
+}
+
+.zoom-link-card {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.copy-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.copy-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.participant-status {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: -3px;
+    border: 2px solid white;
+}
+
+.participant-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.zoom-instructions {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+/* Toast Container */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    min-width: 300px;
+    margin-bottom: 10px;
+}
+
+/* Loading States */
+.btn-loading {
+    position: relative;
+}
+
+.btn-loading .spinner-border {
+    width: 1rem;
+    height: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-alt"></i> My Training Sessions</h2>
+            <p class="text-muted">Manage your training sessions and schedules</p>
+        </div>
+        <div>
+            <a href="{% url 'trainer_management:create_session' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Session
+            </a>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#calendarModal">
+                <i class="fas fa-calendar"></i> Calendar View
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-section mb-4">
+        <div class="row">
+            <div class="col-md-3">
+                <select class="form-control" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="personal">Personal Training</option>
+                    <option value="group">Group Training</option>
+                    <option value="cardio">Cardio</option>
+                    <option value="strength">Strength</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" id="dateFilter">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-primary" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions Grid -->
+    <div class="row">
+        {% for session in sessions %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card session-card h-100 {% if session.is_zoom_session %}online-session{% endif %}">
+                <div class="card-body position-relative">
+                    <!-- Status Badge -->
+                    <div class="session-status">
+                        <span class="badge bg-{{ session.status|yesno:'success,warning,info,secondary,danger' }}">
+                            {{ session.get_status_display }}
+                        </span>
+                        <!-- ZOOM BADGE -->
+                        {% if session.is_zoom_session %}
+                        <div class="mt-1">
+                            <span class="zoom-session-badge">
+                                <i class="fas fa-video"></i> Zoom
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Session Title -->
+                    <h5 class="card-title mt-3">{{ session.title }}</h5>
+                    <p class="card-text text-muted">{{ session.description|truncatechars:100 }}</p>
+
+                    <!-- Session Info -->
+                    <div class="mb-3">
+                        <div class="session-time mb-2">
+                            <i class="fas fa-calendar"></i> {{ session.session_date|date:"M d, Y" }}
+                        </div>
+                        <div class="text-muted">
+                            <i class="fas fa-clock"></i> {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}
+                            <span class="ms-2">({{ session.duration_minutes }} min)</span>
+                        </div>
+                        <!-- LOCATION/ZOOM INFO -->
+                        {% if session.is_zoom_session %}
+                        <div class="text-primary">
+                            <i class="fas fa-video"></i> Online Zoom Session
+                            {% if session.zoom_meeting_id %}
+                                <small class="text-muted d-block">ID: {{ session.zoom_meeting_id }}</small>
+                            {% endif %}
+                        </div>
+                        {% elif session.location %}
+                        <div class="text-muted">
+                            <i class="fas fa-map-marker-alt"></i> {{ session.location }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Session Type & Difficulty -->
+                    <div class="mb-3">
+                        <span class="badge bg-primary">{{ session.get_session_type_display }}</span>
+                        <span class="badge bg-info">{{ session.get_difficulty_level_display }}</span>
+                    </div>
+
+                    <!-- Participants -->
+                    <div class="session-participants mb-3 d-flex align-items-center">
+                        <i class="fas fa-users text-muted me-2"></i>
+                        <span class="text-muted">{{ session.participants_count }}/{{ session.max_participants }} participants</span>
+                        
+                        <div class="ms-auto">
+                            {% for participant in session.participants.all|slice:":3" %}
+                                <!-- ZOOM STATUS INDICATORS -->
+                                {% if session.is_zoom_session %}
+                                    {% if participant.zoom_joined %}
+                                        <div class="participant-status bg-success" title="Joined Zoom"></div>
+                                    {% elif participant.zoom_notified %}
+                                        <div class="participant-status bg-warning" title="Notified"></div>
+                                    {% else %}
+                                        <div class="participant-status bg-secondary" title="Pending"></div>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Regular participant avatar -->
+                                    {% if participant.member.photo %}
+                                        <img src="{{ participant.member.photo.url }}" class="participant-avatar" alt="Profile">
+                                    {% else %}
+                                        <div class="participant-avatar bg-secondary d-inline-flex align-items-center justify-content-center">
+                                            <i class="fas fa-user fa-xs text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if session.participants_count > 3 %}
+                                <span class="badge bg-light text-dark ms-1">+{{ session.participants_count|add:"-3" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'trainer_management:session_detail' session.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        
+                        {% if session.status == 'scheduled' %}
+                            {% if session.is_zoom_session %}
+                                <!-- ZOOM START BUTTON - DIRECT START -->
+                                <button class="btn btn-success btn-sm" onclick="startZoomSession({{ session.id }})" id="zoomStartBtn{{ session.id }}">
+                                    <i class="fas fa-video"></i> Start Zoom
+                                </button>
+                            {% else %}
+                                <button class="btn btn-success btn-sm" onclick="startSession({{ session.id }})" id="startBtn{{ session.id }}">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                            {% endif %}
+                        {% elif session.status == 'active' %}
+                            {% if session.is_zoom_session %}
+                                <div class="zoom-actions">
+                                    <button class="btn btn-info btn-sm" onclick="openZoomManagement({{ session.id }})">
+                                        <i class="fas fa-cogs"></i> Manage
+                                    </button>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'trainer_management:mark_attendance' session.id %}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-check"></i> Attendance
+                                </a>
+                            {% endif %}
+                        {% elif session.status == 'completed' %}
+                            <button class="btn btn-info btn-sm" onclick="viewReport({{ session.id }})">
+                                <i class="fas fa-chart-line"></i> Report
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No sessions found</h4>
+                <p class="text-muted">Create your first training session to get started.</p>
+                <a href="{% url 'trainer_management:create_session' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Session
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ZOOM SESSION MANAGEMENT MODAL -->
+<div class="modal fade" id="zoomSessionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content zoom-modal">
+            <div class="modal-header border-0">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-video fa-2x me-3"></i>
+                    <div>
+                        <h4 class="modal-title mb-0">Zoom Session Management</h4>
+                        <small class="text-light" id="zoomSessionTitle">Loading...</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body" id="zoomModalContent">
+                <div class="text-center">
+                    <div class="spinner-border text-white" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading session data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSessionId = null;
+
+// DIRECT START ZOOM SESSION (like detail template)
+function startZoomSession(sessionId) {
+    if (confirm('Are you sure you want to start this Zoom session?')) {
+        currentSessionId = sessionId;
+        
+        // Show loading state on the button
+        const startButton = document.getElementById(`zoomStartBtn${sessionId}`);
+        if (startButton) {
+            startButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting...';
+            startButton.disabled = true;
+            startButton.classList.add('btn-loading');
+        }
+        
+        // Start the zoom session directly
+        fetch(`/trainer/sessions/${sessionId}/start-zoom/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Zoom session started successfully!', 'success');
+                
+                // Auto-join the meeting after starting
+                setTimeout(() => {
+                    joinZoomMeeting(sessionId);
+                }, 1000);
+                
+                // Reload page to show updated status
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                showToast('Error: ' + data.error, 'danger');
+                resetButtonState(startButton, '<i class="fas fa-video"></i> Start Zoom');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error starting Zoom session', 'danger');
+            resetButtonState(startButton, '<i class="fas fa-video"></i> Start Zoom');
+        });
+    }
+}
+
+// REGULAR SESSION START (non-Zoom)
+function startSession(sessionId) {
+    if (confirm('Are you sure you want to start this session?')) {
+        const startButton = document.getElementById(`startBtn${sessionId}`);
+        if (startButton) {
+            startButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting...';
+            startButton.disabled = true;
+        }
+        
+        fetch(`/trainer/sessions/${sessionId}/start/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Session started successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('Error: ' + data.error, 'danger');
+                resetButtonState(startButton, '<i class="fas fa-play"></i> Start');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error starting session', 'danger');
+            resetButtonState(startButton, '<i class="fas fa-play"></i> Start');
+        });
+    }
+}
+
+// ZOOM MANAGEMENT (when session is already active)
+function openZoomManagement(sessionId) {
+    currentSessionId = sessionId;
+    loadZoomSessionData(sessionId);
+}
+
+// LOAD ZOOM SESSION DATA FOR MANAGEMENT MODAL
+function loadZoomSessionData(sessionId) {
+    const modal = new bootstrap.Modal(document.getElementById('zoomSessionModal'));
+    modal.show();
+    
+    fetch(`/trainer/sessions/${sessionId}/zoom-data/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            updateZoomModal(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('zoomModalContent').innerHTML = 
+                `<div class="alert alert-danger">Error loading session data: ${error.message}</div>`;
+        });
+}
+
+// UPDATE ZOOM MODAL CONTENT
+function updateZoomModal(data) {
+    document.getElementById('zoomSessionTitle').textContent = data.session.title;
+    
+    const modalContent = `
+        <!-- Meeting Link Section -->
+        <div class="zoom-link-card">
+            <h6><i class="fas fa-link me-2"></i>Meeting Link</h6>
+            <div class="input-group">
+                <input type="text" class="form-control" id="zoomLink" 
+                       value="${data.zoom.web_url}" readonly>
+                <button class="btn copy-btn" onclick="copyZoomLink()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+        </div>
+        
+        <!-- Meeting Details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="zoom-instructions">
+                    <h6><i class="fas fa-key me-2"></i>Meeting Details</h6>
+                    <p class="mb-1"><strong>Meeting ID:</strong> ${data.zoom.meeting_id}</p>
+                    <p class="mb-1"><strong>Password:</strong> ${data.zoom.password}</p>
+                    <p class="mb-0"><strong>Duration:</strong> ${data.session.duration} minutes</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="zoom-instructions">
+                    <h6><i class="fas fa-users me-2"></i>Participants</h6>
+                    <p class="mb-1"><strong>Total:</strong> ${data.stats.total_participants}</p>
+                    <p class="mb-1"><strong>Notified:</strong> ${data.stats.notified_count}</p>
+                    <p class="mb-0"><strong>Joined:</strong> ${data.stats.joined_count}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Participants List -->
+        <div class="zoom-instructions">
+            <h6><i class="fas fa-user-friends me-2"></i>Participant Status</h6>
+            <div class="row">
+                ${data.participants.map(participant => `
+                    <div class="col-md-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="participant-status bg-${getStatusColor(participant.status)} me-2"></div>
+                            <span class="small">${participant.name} (${participant.status})</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="modal-footer border-0">
+            <div class="d-flex w-100 gap-2">
+                <button class="btn btn-light flex-fill" onclick="notifyParticipants(${currentSessionId})">
+                    <i class="fas fa-bell"></i> Notify All
+                </button>
+                <button class="btn btn-warning flex-fill" onclick="joinZoomMeeting(${currentSessionId})">
+                    <i class="fas fa-video"></i> Join Meeting
+                </button>
+                <button class="btn btn-success flex-fill" onclick="completeSession(${currentSessionId})">
+                    <i class="fas fa-check"></i> End Session
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('zoomModalContent').innerHTML = modalContent;
+}
+
+// HELPER FUNCTIONS
+function getStatusColor(status) {
+    switch(status) {
+        case 'joined': return 'success';
+        case 'notified': return 'warning';
+        case 'pending': return 'secondary';
+        default: return 'secondary';
+    }
+}
+
+function copyZoomLink() {
+    const linkInput = document.getElementById('zoomLink');
+    linkInput.select();
+    navigator.clipboard.writeText(linkInput.value).then(() => {
+        showToast('Zoom link copied to clipboard!', 'success');
+    });
+}
+
+function notifyParticipants(sessionId) {
+    fetch(`/trainer/sessions/${sessionId}/notify-participants/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            loadZoomSessionData(sessionId); // Refresh data
+        } else {
+            showToast('Error: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error notifying participants', 'danger');
+    });
+}
+
+function joinZoomMeeting(sessionId) {
+    fetch(`/trainer/sessions/${sessionId}/join-zoom/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Open web version to avoid app redirect
+                window.open(data.web_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                showToast('Opening Zoom in web browser...', 'info');
+            } else {
+                showToast('Error: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showToast('Error joining meeting', 'danger');
+        });
+}
+
+function completeSession(sessionId) {
+    if (confirm('Are you sure you want to end this session?')) {
+        fetch(`/trainer/sessions/${sessionId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Session completed successfully!', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('zoomSessionModal'));
+                modal.hide();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('Error: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showToast('Error completing session', 'danger');
+        });
+    }
+}
+
+function viewReport(sessionId) {
+    window.open(`/trainer/sessions/${sessionId}/report/`, '_blank');
+}
+
+// UTILITY FUNCTIONS
+function getCsrfToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return csrfToken ? csrfToken.value : '';
+}
+
+function resetButtonState(button, originalHtml) {
+    if (button) {
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+        button.classList.remove('btn-loading');
+    }
+}
+
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toastId = 'toast-' + Date.now();
+    
+    const toastElement = document.createElement('div');
+    toastElement.id = toastId;
+    toastElement.className = 'toast show';
+    toastElement.setAttribute('role', 'alert');
+    toastElement.innerHTML = `
+        <div class="toast-body bg-${type} text-white d-flex justify-content-between align-items-center">
+            <span>${message}</span>
+            <button type="button" class="btn-close btn-close-white ms-2" onclick="removeToast('${toastId}')"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toastElement);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => removeToast(toastId), 5000);
+}
+
+function removeToast(toastId) {
+    const toast = document.getElementById(toastId);
+    if (toast) {
+        toast.remove();
+    }
+}
+
+// FILTER FUNCTIONS
+function applyFilters() {
+    const status = document.getElementById('statusFilter').value;
+    const type = document.getElementById('typeFilter').value;
+    const date = document.getElementById('dateFilter').value;
+    
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (type) params.append('type', type);
+    if (date) params.append('date', date);
+    
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips if needed
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Add CSRF token to page if not present
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        document.body.appendChild(csrfInput);
+    }
+});
+</script>
+{% endblock %}

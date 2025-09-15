@@ -8,6 +8,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('multiple_gym.urls')),  # Your existing gym management URLs
     path('inventory/', include('inventory_management.urls')),  # New inventory management URLs
+    path('trainer/', include('trainer_management.urls')),
 ]
 
 # Serve media files during development

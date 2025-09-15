@@ -21,10 +21,9 @@ from .models import (
     StockAlert,
 )
 
+
 # Import Gym and GymAdmin from your main app
 from multiple_gym.models import Gym, GymAdmin
-
-
 # Fixed Dashboard View - Replace your existing inventory_dashboard function
 
 
@@ -1309,10 +1308,10 @@ def inventory_list(request, gym_id=None):
             gym_admin = GymAdmin.objects.get(user=request.user)
             if gym not in gym_admin.gyms.all():
                 messages.error(request, "You do not have access to this gym!")
-                return redirect("gymadmin_home")
+                return redirect("multiple_gym:gymadmin_home")
         except GymAdmin.DoesNotExist:
             messages.error(request, "Access denied!")
-            return redirect("login")
+            return redirect("multiple_gym:login")
 
     inventory_items = InventoryItem.objects.filter(gym=gym, is_active=True)
 

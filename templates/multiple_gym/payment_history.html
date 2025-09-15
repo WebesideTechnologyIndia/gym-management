@@ -57,7 +57,7 @@
                     <!-- Add Payment Button -->
                     {% if membership.remaining_amount > 0 %}
                     <div class="mb-3">
-                        <a href="{% url 'add_payment' membership.pk %}" class="btn btn-success">
+                        <a href="{% url 'multiple_gym:add_payment' membership.pk %}" class="btn btn-success">
                             <i class="fas fa-plus me-1"></i>Add Payment
                         </a>
                     </div>
@@ -158,14 +158,14 @@
                     <!-- Action Buttons -->
                     <div class="d-flex gap-2 mt-3">
                         {% if membership.remaining_amount > 0 %}
-                        <a href="{% url 'add_payment' membership.pk %}" class="btn btn-success">
+                        <a href="{% url 'multiple_gym:add_payment' membership.pk %}" class="btn btn-success">
                             <i class="fas fa-plus me-1"></i>Add Payment
                         </a>
                         {% endif %}
-                        <a href="{% url 'membership_detail' membership.pk %}" class="btn btn-primary">
+                        <a href="{% url 'multiple_gym:membership_detail' membership.pk %}" class="btn btn-primary">
                             <i class="fas fa-arrow-left me-1"></i>Back to Membership
                         </a>
-                        <a href="{% url 'membership_list' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'multiple_gym:membership_list' %}" class="btn btn-outline-secondary">
                             <i class="fas fa-list me-1"></i>All Memberships
                         </a>
                     </div>

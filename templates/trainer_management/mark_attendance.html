@@ -1,0 +1,435 @@
+<!-- # 4. mark_attendance.html - Session ki attendance mark karne ka page -->
+
+{% extends 'trainer_management/base/trainer_base.html' %}
+{% load static %}
+
+{% block title %}Mark Attendance - {{ session.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.attendance-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.participant-row {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.participant-row:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.participant-row.present {
+    border-color: #28a745;
+    background: #f8fff9;
+}
+
+.participant-row.absent {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.attendance-toggle {
+    transform: scale(1.5);
+}
+
+.performance-input {
+    border: none;
+    background: #f8f9fa;
+    border-radius: 5px;
+    padding: 8px 12px;
+}
+
+.star-rating {
+    display: inline-block;
+}
+
+.star-rating input[type="radio"] {
+    display: none;
+}
+
+.star-rating label {
+    color: #dd.star-rating label {
+    color: #ddd;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.star-rating input[type="radio"]:checked ~ label,
+.star-rating label:hover {
+    color: #ffc107;
+}
+
+.session-summary {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.quick-actions {
+    position: sticky;
+    top: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Attendance Header -->
+    <div class="attendance-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-clipboard-check"></i> Mark Attendance</h2>
+                <h4 class="mb-0">{{ session.title }}</h4>
+                <p class="mb-0">{{ session.session_date|date:"l, F d, Y" }} | {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="bg-white text-dark rounded p-3">
+                    <h5 class="mb-1">{{ participants_data|length }} Participants</h5>
+                    <small>Ready to mark attendance</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="attendanceForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Participants List -->
+            <div class="col-md-8">
+                {% for data in participants_data %}
+                <div class="participant-row" data-member-id="{{ data.member.id }}">
+                    <div class="row align-items-center">
+                        <!-- Member Info & Attendance -->
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                {% if data.member.photo %}
+                                    <img src="{{ data.member.photo.url }}" class="rounded-circle me-3" 
+                                         width="50" height="50" alt="Profile">
+                                {% else %}
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 50px; height: 50px;">
+                                        <i class="fas fa-user text-secondary"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ data.member.user.get_full_name }}</strong><br>
+                                    <small class="text-muted">{{ data.member.membership_type }}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input attendance-toggle" type="checkbox" 
+                                           name="present_{{ data.member.id }}" id="present_{{ data.member.id }}"
+                                           {% if data.attendance.marked_present %}checked{% endif %}
+                                           onchange="togglePerformanceFields({{ data.member.id }})">
+                                    <label class="form-check-label fw-bold" for="present_{{ data.member.id }}">
+                                        <span class="present-text">Present</span>
+                                        <span class="absent-text">Absent</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Performance Metrics -->
+                        <div class="col-md-6 performance-section" id="performance_{{ data.member.id }}" 
+                             style="{% if not data.attendance.marked_present %}display: none;{% endif %}">
+                            
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Exercises Completed</label>
+                                    <input type="text" class="form-control performance-input" 
+                                           name="exercises_{{ data.member.id }}" 
+                                           value="{{ data.attendance.exercises_completed|default:'' }}"
+                                           placeholder="e.g., Push-ups, Squats">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Sets</label>
+                                    <input type="number" class="form-control performance-input" 
+                                           name="sets_{{ data.member.id }}" 
+                                           value="{{ data.attendance.sets_completed|default:'' }}"
+                                           min="0" placeholder="0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Reps</label>
+                                    <input type="number" class="form-control performance-input" 
+                                           name="reps_{{ data.member.id }}" 
+                                           value="{{ data.attendance.reps_completed|default:'' }}"
+                                           min="0" placeholder="0">
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Weight (kg)</label>
+                                    <input type="number" class="form-control performance-input" 
+                                           name="weight_{{ data.member.id }}" 
+                                           value="{{ data.attendance.weight_lifted|default:'' }}"
+                                           step="0.5" min="0" placeholder="0.0">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Energy Level</label>
+                                    <select class="form-control performance-input" name="energy_{{ data.member.id }}">
+                                        <option value="">Select</option>
+                                        <option value="low" {% if data.attendance.member_energy_level == 'low' %}selected{% endif %}>Low</option>
+                                        <option value="medium" {% if data.attendance.member_energy_level == 'medium' %}selected{% endif %}>Medium</option>
+                                        <option value="high" {% if data.attendance.member_energy_level == 'high' %}selected{% endif %}>High</option>
+                                        <option value="very_high" {% if data.attendance.member_energy_level == 'very_high' %}selected{% endif %}>Very High</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Satisfaction</label>
+                                    <div class="star-rating">
+                                        {% for i in "12345" %}
+                                            <input type="radio" name="satisfaction_{{ data.member.id }}" 
+                                                   value="{{ forloop.counter }}" id="star_{{ data.member.id }}_{{ forloop.counter }}"
+                                                   {% if data.attendance.member_satisfaction == forloop.counter %}checked{% endif %}>
+                                            <label for="star_{{ data.member.id }}_{{ forloop.counter }}">★</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small">Trainer Notes</label>
+                                <textarea class="form-control performance-input" 
+                                          name="notes_{{ data.member.id }}" rows="2"
+                                          placeholder="Notes about member's performance...">{{ data.attendance.trainer_notes|default:'' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="col-md-3 text-center">
+                            {% if data.attendance %}
+                                <div class="small text-muted">
+                                    Last Session:<br>
+                                    <strong>{{ data.attendance.created_at|date:"M d" }}</strong>
+                                </div>
+                            {% else %}
+                                <div class="small text-muted">
+                                    First session<br>
+                                    with this member
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No participants enrolled</h5>
+                    <p class="text-muted">Add participants to this session to mark attendance.</p>
+                </div>
+                {% endfor %}
+
+                <!-- Session Notes -->
+                {% if participants_data %}
+                <div class="session-summary">
+                    <h5><i class="fas fa-sticky-note"></i> Session Summary Notes</h5>
+                    <textarea class="form-control" name="session_notes" rows="4" 
+                              placeholder="General notes about the session, overall performance, any issues or highlights...">{{ session.post_session_notes|default:'' }}</textarea>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions Sidebar -->
+            <div class="col-md-4">
+                <div class="quick-actions">
+                    <!-- Attendance Summary -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-pie"></i> Attendance Summary</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="row">
+                                <div class="col-6">
+                                    <h3 class="text-success" id="presentCount">0</h3>
+                                    <small>Present</small>
+                                </div>
+                                <div class="col-6">
+                                    <h3 class="text-danger" id="absentCount">{{ participants_data|length }}</h3>
+                                    <small>Absent</small>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: 0%" id="attendanceProgress"></div>
+                            </div>
+                            <small class="text-muted">Attendance Rate: <span id="attendanceRate">0%</span></small>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-success" onclick="markAllPresent()">
+                                    <i class="fas fa-check-double"></i> Mark All Present
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="markAllAbsent()">
+                                    <i class="fas fa-times"></i> Mark All Absent
+                                </button>
+                                <button type="button" class="btn btn-info" onclick="fillSampleData()">
+                                    <i class="fas fa-magic"></i> Fill Sample Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Info -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-info-circle"></i> Session Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Duration:</strong> {{ session.duration_minutes }} minutes</p>
+                            <p><strong>Type:</strong> {{ session.get_session_type_display }}</p>
+                            <p><strong>Difficulty:</strong> {{ session.get_difficulty_level_display }}</p>
+                            {% if session.location %}
+                            <p><strong>Location:</strong> {{ session.location }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Save Actions -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save"></i> Save Attendance
+                                </button>
+                                <a href="{% url 'trainer_management:session_detail' session.id %}" 
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Session
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    updateAttendanceSummary();
+    
+    // Attendance toggle listeners
+    $('.attendance-toggle').change(function() {
+        const memberId = $(this).attr('name').split('_')[1];
+        togglePerformanceFields(memberId);
+        updateAttendanceSummary();
+        updateRowStyle(memberId);
+    });
+    
+    // Initialize row styles
+    $('.attendance-toggle').each(function() {
+        const memberId = $(this).attr('name').split('_')[1];
+        updateRowStyle(memberId);
+    });
+});
+
+function togglePerformanceFields(memberId) {
+    const checkbox = $(`#present_${memberId}`);
+    const performanceSection = $(`#performance_${memberId}`);
+    
+    if (checkbox.prop('checked')) {
+        performanceSection.slideDown();
+    } else {
+        performanceSection.slideUp();
+        // Clear performance data when marking absent
+        performanceSection.find('input, textarea, select').val('');
+        performanceSection.find('input[type="radio"]').prop('checked', false);
+    }
+}
+
+function updateRowStyle(memberId) {
+    const checkbox = $(`#present_${memberId}`);
+    const row = $(`.participant-row[data-member-id="${memberId}"]`);
+    
+    row.removeClass('present absent');
+    if (checkbox.prop('checked')) {
+        row.addClass('present');
+    } else {
+        row.addClass('absent');
+    }
+}
+
+function updateAttendanceSummary() {
+    const total = $('.attendance-toggle').length;
+    const present = $('.attendance-toggle:checked').length;
+    const absent = total - present;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+    
+    $('#presentCount').text(present);
+    $('#absentCount').text(absent);
+    $('#attendanceRate').text(`${rate}%`);
+    $('#attendanceProgress').css('width', `${rate}%`);
+}
+
+function markAllPresent() {
+    if (confirm('Mark all participants as present?')) {
+        $('.attendance-toggle').prop('checked', true).trigger('change');
+    }
+}
+
+function markAllAbsent() {
+    if (confirm('Mark all participants as absent? This will clear all performance data.')) {
+        $('.attendance-toggle').prop('checked', false).trigger('change');
+    }
+}
+
+function fillSampleData() {
+    if (confirm('Fill sample performance data for all present members?')) {
+        $('.attendance-toggle:checked').each(function() {
+            const memberId = $(this).attr('name').split('_')[1];
+            
+            // Fill sample data
+            $(`input[name="exercises_${memberId}"]`).val('Push-ups, Squats, Plank');
+            $(`input[name="sets_${memberId}"]`).val('3');
+            $(`input[name="reps_${memberId}"]`).val('12');
+            $(`input[name="weight_${memberId}"]`).val('20.0');
+            $(`select[name="energy_${memberId}"]`).val('high');
+            $(`input[name="satisfaction_${memberId}"][value="4"]`).prop('checked', true);
+            $(`textarea[name="notes_${memberId}"]`).val('Good performance, showed improvement');
+        });
+    }
+}
+
+// Form validation
+$('#attendanceForm').submit(function(e) {
+    const presentCount = $('.attendance-toggle:checked').length;
+    
+    if (presentCount === 0) {
+        if (!confirm('No participants are marked as present. Are you sure you want to continue?')) {
+            e.preventDefault();
+            return false;
+        }
+    }
+    
+    // Show loading state
+    $(this).find('button[type="submit"]').html('<i class="fas fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+});
+</script>
+{% endblock %}
+

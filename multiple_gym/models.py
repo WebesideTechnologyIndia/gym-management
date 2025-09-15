@@ -10,6 +10,7 @@ class User(AbstractUser):
         ('superadmin', 'Super Admin'),
         ('gymadmin', 'Gym Admin'),
         ('member', 'Member'),
+        ('trainer', 'Trainer'),
     )
     user_type = models.CharField(max_length=20, choices=USER_TYPES, default='member')
     phone = models.CharField(max_length=15, blank=True)

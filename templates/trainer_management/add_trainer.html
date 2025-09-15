@@ -1,0 +1,483 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}Add Trainer - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user-plus"></i> Add Trainer - {{ gym.name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Trainers
+        </a>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+    {% csrf_token %}
+    
+    <div class="row">
+        <!-- Personal Information -->
+        <div class="col-md-8">
+            <!-- Personal Information Section - YEH MISSING THA! -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-user"></i> Personal Information
+        </h5>
+    </div>
+    <div class="card-body">
+        <!-- Name Fields Row -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="username" class="form-label">Username *</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+                <div class="invalid-feedback">Please provide a username.</div>
+                <small class="text-muted">Used for login</small>
+            </div>
+            <div class="col-md-4">
+                <label for="first_name" class="form-label">First Name *</label>
+                <input type="text" class="form-control" id="first_name" name="first_name" required>
+                <div class="invalid-feedback">Please provide first name.</div>
+            </div>
+            <div class="col-md-4">
+                <label for="last_name" class="form-label">Last Name *</label>
+                <input type="text" class="form-control" id="last_name" name="last_name" required>
+                <div class="invalid-feedback">Please provide last name.</div>
+            </div>
+        </div>
+
+        <!-- Email and Password Row -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="email" class="form-label">Email Address *</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+                <div class="invalid-feedback">Please provide a valid email.</div>
+            </div>
+            <div class="col-md-6">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="password" name="password">
+                    <button class="btn btn-outline-secondary" type="button" onclick="generatePassword()">
+                        <i class="fas fa-random"></i> Generate
+                    </button>
+                </div>
+                <small class="text-muted">Leave blank to auto-generate</small>
+            </div>
+        </div>
+
+        <!-- Phone and DOB Row -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="phone" class="form-label">Phone Number *</label>
+                <input type="tel" class="form-control" id="phone" name="phone" required pattern="[0-9]{10}">
+                <div class="invalid-feedback">Please provide a 10-digit phone number.</div>
+            </div>
+            <div class="col-md-4">
+                <label for="alternate_phone" class="form-label">Alternate Phone</label>
+                <input type="tel" class="form-control" id="alternate_phone" name="alternate_phone" pattern="[0-9]{10}">
+            </div>
+            <div class="col-md-4">
+                <label for="date_of_birth" class="form-label">Date of Birth</label>
+                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+            </div>
+        </div>
+
+        <!-- Gender and Photo Row -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="gender" class="form-label">Gender</label>
+                <select class="form-select" id="gender" name="gender">
+                    <option value="">Select Gender</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="O">Other</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="photo" class="form-label">Profile Photo</label>
+                <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                <small class="text-muted">Optional: Upload trainer's photo</small>
+            </div>
+        </div>
+    </div>
+</div>
+        </div>
+
+        <!-- Professional Information & Permissions -->
+        <div class="col-md-4">
+            <!-- Professional Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-briefcase"></i> Professional Info
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="specialization" class="form-label">Specialization</label>
+                        <input type="text" class="form-control" id="specialization" name="specialization" 
+                               placeholder="e.g., Weight Training, Yoga, Cardio">
+                        <small class="text-muted">Primary area of expertise</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="experience_years" class="form-label">Experience (Years)</label>
+                        <input type="number" class="form-control" id="experience_years" name="experience_years" 
+                               min="0" max="50" value="0">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hire_date" class="form-label">Hire Date</label>
+                        <input type="date" class="form-control" id="hire_date" name="hire_date" 
+                               value="{{ today|date:'Y-m-d' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="certifications" class="form-label">Certifications</label>
+                        <textarea class="form-control" id="certifications" name="certifications" rows="3"
+                                  placeholder="List relevant certifications..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="bio" class="form-label">Bio/Description</label>
+                        <textarea class="form-control" id="bio" name="bio" rows="4"
+                                  placeholder="Brief professional bio..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Salary Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-rupee-sign"></i> Salary Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="salary_type" class="form-label">Salary Type</label>
+                        <select class="form-select" id="salary_type" name="salary_type">
+                            <option value="fixed">Fixed Monthly</option>
+                            <option value="hourly">Per Hour</option>
+                            <option value="session">Per Session</option>
+                            <option value="commission">Commission Based</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="salary_amount" class="form-label">Amount (₹)</label>
+                        <input type="number" class="form-control" id="salary_amount" name="salary_amount" 
+                               min="0" step="0.01" placeholder="0.00">
+                        <small class="text-muted">Based on selected salary type</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key"></i> Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_create_members" name="can_create_members">
+                        <label class="form-check-label" for="can_create_members">
+                            Can Create Members
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_edit_members" name="can_edit_members">
+                        <label class="form-check-label" for="can_edit_members">
+                            Can Edit Members
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_view_all_members" name="can_view_all_members" checked>
+                        <label class="form-check-label" for="can_view_all_members">
+                            Can View All Members
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_create_sessions" name="can_create_sessions" checked>
+                        <label class="form-check-label" for="can_create_sessions">
+                            Can Create Sessions
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_edit_sessions" name="can_edit_sessions" checked>
+                        <label class="form-check-label" for="can_edit_sessions">
+                            Can Edit Sessions
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_delete_sessions" name="can_delete_sessions">
+                        <label class="form-check-label" for="can_delete_sessions">
+                            Can Delete Sessions
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_upload_content" name="can_upload_content" checked>
+                        <label class="form-check-label" for="can_upload_content">
+                            Can Upload Content
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_manage_assignments" name="can_manage_assignments">
+                        <label class="form-check-label" for="can_manage_assignments">
+                            Can Manage Assignments
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_view_reports" name="can_view_reports">
+                        <label class="form-check-label" for="can_view_reports">
+                            Can View Reports
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="can_view_payments" name="can_view_payments">
+                        <label class="form-check-label" for="can_view_payments">
+                            Can View Payments
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-secondary me-2" onclick="resetForm()">
+                                <i class="fas fa-undo"></i> Reset Form
+                            </button>
+                            <button type="button" class="btn btn-info me-2" onclick="previewTrainer()">
+                                <i class="fas fa-eye"></i> Preview
+                            </button>
+                        </div>
+                        <div>
+                            <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Create Trainer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Trainer Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">Create Trainer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+}
+
+.invalid-feedback {
+    display: block;
+}
+
+.was-validated .form-control:valid {
+    border-color: #28a745;
+}
+
+.was-validated .form-control:invalid {
+    border-color: #dc3545;
+}
+
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Generate random password
+function generatePassword() {
+    const length = 8;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    document.getElementById('password').value = password;
+    
+    // Show password temporarily
+    const passwordField = document.getElementById('password');
+    passwordField.type = 'text';
+    setTimeout(function() {
+        passwordField.type = 'password';
+    }, 3000);
+}
+
+// Reset form
+function resetForm() {
+    if (confirm('Are you sure you want to reset all fields?')) {
+        document.querySelector('form').reset();
+        document.querySelector('form').classList.remove('was-validated');
+    }
+}
+
+// Preview trainer data
+function previewTrainer() {
+    const formData = new FormData(document.querySelector('form'));
+    let previewHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Personal Information</h6>
+                <p><strong>Name:</strong> ${formData.get('first_name')} ${formData.get('last_name')}</p>
+                <p><strong>Username:</strong> ${formData.get('username')}</p>
+                <p><strong>Email:</strong> ${formData.get('email')}</p>
+                <p><strong>Phone:</strong> ${formData.get('phone')}</p>
+                <p><strong>Gender:</strong> ${formData.get('gender') || 'Not specified'}</p>
+                <p><strong>Date of Birth:</strong> ${formData.get('date_of_birth') || 'Not specified'}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Professional Information</h6>
+                <p><strong>Specialization:</strong> ${formData.get('specialization') || 'Not specified'}</p>
+                <p><strong>Experience:</strong> ${formData.get('experience_years')} years</p>
+                <p><strong>Hire Date:</strong> ${formData.get('hire_date')}</p>
+                <p><strong>Salary Type:</strong> ${formData.get('salary_type')}</p>
+                <p><strong>Salary Amount:</strong> ₹${formData.get('salary_amount') || '0'}</p>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-12">
+                <h6>Permissions</h6>
+                <ul class="list-unstyled">
+    `;
+    
+    const permissions = [
+        'can_create_members', 'can_edit_members', 'can_view_all_members',
+        'can_create_sessions', 'can_edit_sessions', 'can_delete_sessions',
+        'can_upload_content', 'can_manage_assignments', 'can_view_reports', 'can_view_payments'
+    ];
+    
+    permissions.forEach(permission => {
+        if (formData.get(permission)) {
+            const label = permission.replace('can_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            previewHTML += `<li><i class="fas fa-check text-success"></i> ${label}</li>`;
+        }
+    });
+    
+    previewHTML += `
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewHTML;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+// Submit form from modal
+function submitForm() {
+    document.querySelector('form').submit();
+}
+
+// Real-time validation
+document.addEventListener('DOMContentLoaded', function() {
+    // Username validation
+    const usernameField = document.getElementById('username');
+    usernameField.addEventListener('blur', function() {
+        const username = this.value;
+        if (username.length < 3) {
+            this.setCustomValidity('Username must be at least 3 characters long');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Email validation
+    const emailField = document.getElementById('email');
+    emailField.addEventListener('blur', function() {
+        const email = this.value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            this.setCustomValidity('Please enter a valid email address');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Phone validation
+    const phoneField = document.getElementById('phone');
+    phoneField.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+        if (this.value.length > 10) {
+            this.value = this.value.slice(0, 10);
+        }
+    });
+});
+</script>
+{% endblock %}

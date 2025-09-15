@@ -1,0 +1,135 @@
+<!-- trainer_management/base/trainer_sidebar.html -->
+<div class="position-sticky pt-3 sidebar-sticky">
+    <div class="text-center pb-3 border-bottom">
+        {% if trainer.photo %}
+            <img src="{{ trainer.photo.url }}" class="rounded-circle mb-2" width="60" height="60" alt="Profile">
+        {% else %}
+            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                <i class="fas fa-user text-white"></i>
+            </div>
+        {% endif %}
+        <h6 class="mb-0">{{ trainer.user.get_full_name }}</h6>
+        <small class="text-muted">{{ trainer.specialization|default:"Trainer" }}</small>
+    </div>
+
+    <ul class="nav flex-column">
+        <!-- Dashboard - Always visible -->
+        <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'trainer_dashboard' %}active{% endif %}" 
+               href="{% url 'trainer_management:trainer_dashboard' %}">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+        </li>
+        
+        <!-- Session Management - Based on permissions -->
+        {% if trainer.permissions.can_create_sessions or trainer.permissions.can_edit_sessions %}
+        <li class="nav-item">
+            <a class="nav-link {% if 'session' in request.resolver_match.url_name %}active{% endif %}" 
+               href="{% url 'trainer_management:session_list' %}">
+                <i class="fas fa-calendar-alt"></i> My Sessions
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if trainer.permissions.can_create_sessions %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'trainer_management:create_session' %}">
+                <i class="fas fa-plus"></i> Create Session
+            </a>
+        </li>
+        {% endif %}
+        
+        <!-- Members - Based on permissions -->
+        <!-- {% if trainer.permissions.can_view_all_members %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'multiple_gym:gym_detail' trainer.gym.id %}">
+                <i class="fas fa-users"></i> All Members
+            </a>
+        </li>
+        {% endif %} -->
+        
+        <!-- My Assigned Members - Always show assigned members -->
+        <li class="nav-item">
+           <a class="nav-link" href="{% url 'trainer_management:trainer_member_list' %}" class="btn btn-secondary"><i class="fas fa-user-plus"
+            ></i> My Members
+        </a>
+        </li>
+        
+        {% if trainer.permissions.can_create_members %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'multiple_gym:add_member' trainer.gym.id %}">
+                <i class="fas fa-user-plus"></i> Add Member
+            </a>
+        </li>
+        {% endif %}
+        
+        <!-- Reports - Based on permissions -->
+        {% if trainer.permissions.can_view_reports %}
+        <li class="nav-item">
+            <a class="nav-link" href="#">
+                <i class="fas fa-chart-bar"></i> My Reports
+            </a>
+        </li>
+        {% endif %}
+        
+        {% if trainer.permissions.can_view_payments %}
+        <li class="nav-item">
+            <a class="nav-link" href="#">
+                <i class="fas fa-credit-card"></i> Payment Info
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+        <span>Quick Stats</span>
+    </h6>
+    
+    <div class="px-3">
+        <div class="card bg-light mb-2">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between">
+                    <span class="small">Today's Sessions</span>
+                    <span class="badge bg-info">{{ total_sessions_today|default:0 }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card bg-light mb-2">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between">
+                    <span class="small">This Week</span>
+                    <span class="badge bg-success">{{ total_sessions_this_week|default:0 }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card bg-light">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between">
+                    <span class="small">Assigned Members</span>
+                    <span class="badge bg-primary">{{ trainer.assigned_members_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Info (for debugging - remove in production) -->
+    {% if settings.DEBUG %}
+    <div class="px-3 mt-3">
+        <small class="text-muted d-block">Permissions:</small>
+        <div class="small">
+            {% if trainer.permissions.can_create_sessions %}<span class="badge bg-success me-1">Sessions</span>{% endif %}
+            {% if trainer.permissions.can_create_members %}<span class="badge bg-info me-1">Members</span>{% endif %}
+            {% if trainer.permissions.can_view_reports %}<span class="badge bg-warning me-1">Reports</span>{% endif %}
+            {% if trainer.permissions.can_upload_content %}<span class="badge bg-secondary me-1">Content</span>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function viewMyAssignedMembers() {
+    // Redirect to filtered view of assigned members
+}
+</script>

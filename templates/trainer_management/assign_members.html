@@ -1,0 +1,549 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}Assign Members to {{ trainer.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user-friends"></i> Assign Members to {{ trainer.user.get_full_name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'trainer_management:trainer_detail' gym_id trainer.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Trainer
+        </a>
+    </div>
+</div>
+
+<!-- Trainer Info Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                {% if trainer.photo %}
+                    <img src="{{ trainer.photo.url }}" class="rounded-circle" width="60" height="60" alt="Trainer Photo">
+                {% else %}
+                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="flex-grow-1">
+                <h5 class="mb-1">{{ trainer.user.get_full_name }}</h5>
+                <p class="text-muted mb-1">{{ trainer.specialization|default:"General Trainer" }}</p>
+                <p class="mb-0">
+                    <span class="badge bg-primary me-1">{{ trainer.experience_years }} years experience</span>
+                    <span class="badge bg-success">{{ trainer.assigned_members_count }} members assigned</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" class="needs-validation" novalidate>
+    {% csrf_token %}
+    
+    <div class="row">
+        <!-- Member Selection -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Select Members to Assign
+                    </h5>
+                    <div>
+                        <span class="badge bg-info" id="selected-count">0 selected</span>
+                        <span class="badge bg-secondary ms-1">{{ all_members.count }} total members</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Search and Filter -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="member-search" 
+                                       placeholder="Search members by name...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="membership-filter">
+                                <option value="">All Members</option>
+                                <option value="active">Active Members</option>
+                                <option value="assigned">Already Assigned</option>
+                                <option value="unassigned">Unassigned</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="btn-group w-100">
+                                <button type="button" class="btn btn-outline-primary" onclick="selectAll()">
+                                    Select All
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="clearAll()">
+                                    Clear All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Members Grid -->
+                    <div class="member-grid" style="max-height: 500px; overflow-y: auto;">
+                        {% if all_members %}
+                            <div class="row">
+                                {% for member in all_members %}
+                                <div class="col-md-6 col-lg-4 mb-3 member-item" 
+                                     data-member-name="{{ member.user.get_full_name|lower }}"
+                                     data-assigned="{% if member.id in assigned_member_ids %}true{% else %}false{% endif %}">
+                                    <div class="card member-card h-100 {% if member.id in assigned_member_ids %}border-warning{% endif %}">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input member-checkbox" type="checkbox" 
+                                                       id="member_{{ member.id }}" 
+                                                       name="members" 
+                                                       value="{{ member.id }}"
+                                                       {% if member.id in assigned_member_ids %}checked{% endif %}>
+                                                <label class="form-check-label w-100" for="member_{{ member.id }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="me-2">
+                                                            {% if member.photo %}
+                                                                <img src="{{ member.photo.url }}" class="rounded-circle" 
+                                                                     width="40" height="40" alt="Member Photo">
+                                                            {% else %}
+                                                                <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center" 
+                                                                     style="width: 40px; height: 40px;">
+                                                                    <i class="fas fa-user text-white"></i>
+                                                                </div>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <strong class="d-block">{{ member.user.get_full_name }}</strong>
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-phone"></i> {{ member.phone }}
+                                                            </small>
+                                                            {% if member.id in assigned_member_ids %}
+                                                            <div>
+                                                                <span class="badge bg-warning text-dark">Currently Assigned</span>
+                                                            </div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Member details -->
+                                                    <div class="mt-2">
+                                                        <div class="row text-center">
+                                                            <div class="col-6">
+                                                                <small class="text-muted">Age</small>
+                                                                <div class="fw-bold">{{ member.age|default:"N/A" }}</div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <small class="text-muted">Joined</small>
+                                                                <div class="fw-bold">{{ member.created_at|date:"M Y" }}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-users-slash fa-4x mb-3"></i>
+                                <h4>No Members Found</h4>
+                                <p>There are no members in {{ gym.name }} to assign.</p>
+                                <a href="{% url 'multiple_gym:add_member' gym_id %}" class="btn btn-primary">
+                                    <i class="fas fa-user-plus"></i> Add First Member
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment Details -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list"></i> Assignment Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="assignment_type" class="form-label">Assignment Type *</label>
+                        <select class="form-select" id="assignment_type" name="assignment_type" required>
+                            <option value="">Select Type</option>
+                            <option value="weight_loss">Weight Loss</option>
+                            <option value="muscle_gain">Muscle Gain</option>
+                            <option value="fitness">General Fitness</option>
+                            <option value="strength">Strength Training</option>
+                            <option value="cardio">Cardio Training</option>
+                            <option value="rehabilitation">Rehabilitation</option>
+                            <option value="sport_specific">Sport Specific</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <div class="invalid-feedback">Please select assignment type.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="goals" class="form-label">Fitness Goals</label>
+                        <textarea class="form-control" id="goals" name="goals" rows="3" 
+                                  placeholder="Describe the member's fitness goals and objectives..."></textarea>
+                        <small class="text-muted">What does the member want to achieve?</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Any special instructions or notes..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> Assigning members will replace their existing trainer assignments for selected members.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Currently Assigned Summary -->
+            <div class="card mb-4" id="currently-assigned" style="display: none;">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users-cog"></i> Currently Assigned Members
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="small text-muted">
+                        These members are already assigned to {{ trainer.user.get_full_name }}:
+                    </div>
+                    <div id="assigned-list" class="mt-2">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignment Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check"></i> Assignment Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <strong class="d-block" id="new-assignments">0</strong>
+                                <small class="text-muted">New Assignments</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <strong class="d-block" id="total-after">{{ trainer.assigned_members_count }}</strong>
+                            <small class="text-muted">Total After</small>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success" id="assign-btn" disabled>
+                            <i class="fas fa-user-check"></i> Assign Selected Members
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <i class="fas fa-undo"></i> Reset Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Bulk Assignment Modal -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to assign <strong id="bulk-count">0</strong> members to {{ trainer.user.get_full_name }}.</p>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This will replace existing trainer assignments for selected members.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Quick Assignment Type</label>
+                    <select class="form-select" id="bulk-assignment-type">
+                        <option value="fitness">General Fitness</option>
+                        <option value="weight_loss">Weight Loss</option>
+                        <option value="muscle_gain">Muscle Gain</option>
+                        <option value="strength">Strength Training</option>
+                        <option value="cardio">Cardio Training</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmBulkAssignment()">
+                    Confirm Assignment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.member-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.member-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.member-card.selected {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.member-card.already-assigned {
+    border-color: #ffc107;
+    background-color: #fffbf0;
+}
+
+.form-check-input:checked + .form-check-label .card {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.member-grid {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedMembers = [];
+let alreadyAssignedCount = {{ assigned_member_ids|length }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize with already assigned members
+    const assignedCheckboxes = document.querySelectorAll('input[name="members"]:checked');
+    assignedCheckboxes.forEach(checkbox => {
+        selectedMembers.push(checkbox.value);
+    });
+    
+    updateCounts();
+    updateAssignedList();
+    
+    // Add event listeners to checkboxes
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if (!selectedMembers.includes(this.value)) {
+                    selectedMembers.push(this.value);
+                }
+            } else {
+                selectedMembers = selectedMembers.filter(id => id !== this.value);
+            }
+            updateCounts();
+            updateAssignedList();
+        });
+    });
+    
+    // Search functionality
+    const searchInput = document.getElementById('member-search');
+    searchInput.addEventListener('input', function() {
+        filterMembers();
+    });
+    
+    // Filter functionality
+    const filterSelect = document.getElementById('membership-filter');
+    filterSelect.addEventListener('change', function() {
+        filterMembers();
+    });
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (selectedMembers.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one member to assign.');
+            return false;
+        }
+        
+        const assignmentType = document.getElementById('assignment_type').value;
+        if (!assignmentType) {
+            e.preventDefault();
+            alert('Please select an assignment type.');
+            return false;
+        }
+    });
+});
+
+function updateCounts() {
+    const newAssignments = selectedMembers.length;
+    const totalAfter = alreadyAssignedCount + (newAssignments - {{ assigned_member_ids|length }});
+    
+    document.getElementById('selected-count').textContent = `${newAssignments} selected`;
+    document.getElementById('new-assignments').textContent = newAssignments;
+    document.getElementById('total-after').textContent = Math.max(0, totalAfter);
+    
+    // Enable/disable assign button
+    const assignBtn = document.getElementById('assign-btn');
+    assignBtn.disabled = newAssignments === 0;
+    
+    // Show currently assigned section if there are assigned members
+    const currentlyAssigned = document.getElementById('currently-assigned');
+    if ({{ assigned_member_ids|length }} > 0) {
+        currentlyAssigned.style.display = 'block';
+    }
+}
+
+function updateAssignedList() {
+    const assignedList = document.getElementById('assigned-list');
+    const assignedMembers = selectedMembers.filter(id => 
+        {{ assigned_member_ids|safe }}.includes(parseInt(id))
+    );
+    
+    if (assignedMembers.length > 0) {
+        assignedList.innerHTML = assignedMembers.map(id => {
+            const checkbox = document.querySelector(`input[value="${id}"]`);
+            const label = checkbox.parentElement.querySelector('strong').textContent;
+            return `<span class="badge bg-warning text-dark me-1">${label}</span>`;
+        }).join('');
+    } else {
+        assignedList.innerHTML = '<em class="text-muted">None currently assigned</em>';
+    }
+}
+
+function selectAll() {
+    const visibleCheckboxes = document.querySelectorAll('.member-item:not([style*="display: none"]) .member-checkbox');
+    visibleCheckboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+            if (!selectedMembers.includes(checkbox.value)) {
+                selectedMembers.push(checkbox.value);
+            }
+        }
+    });
+    updateCounts();
+    updateAssignedList();
+}
+
+function clearAll() {
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    selectedMembers = [];
+    updateCounts();
+    updateAssignedList();
+}
+
+function filterMembers() {
+    const searchTerm = document.getElementById('member-search').value.toLowerCase();
+    const filterType = document.getElementById('membership-filter').value;
+    const memberItems = document.querySelectorAll('.member-item');
+    
+    memberItems.forEach(item => {
+        const memberName = item.dataset.memberName;
+        const isAssigned = item.dataset.assigned === 'true';
+        
+        // Check search term
+        const matchesSearch = memberName.includes(searchTerm);
+        
+        // Check filter
+        let matchesFilter = true;
+        if (filterType === 'assigned') {
+            matchesFilter = isAssigned;
+        } else if (filterType === 'unassigned') {
+            matchesFilter = !isAssigned;
+        } else if (filterType === 'active') {
+            // Assume all shown members are active
+            matchesFilter = true;
+        }
+        
+        // Show/hide based on filters
+        if (matchesSearch && matchesFilter) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function resetForm() {
+    if (confirm('Are you sure you want to reset all selections?')) {
+        clearAll();
+        document.getElementById('assignment_type').value = '';
+        document.getElementById('goals').value = '';
+        document.getElementById('notes').value = '';
+        document.getElementById('member-search').value = '';
+        document.getElementById('membership-filter').value = '';
+        filterMembers();
+    }
+}
+
+function bulkAssign() {
+    if (selectedMembers.length === 0) {
+        alert('Please select members first.');
+        return;
+    }
+    
+    document.getElementById('bulk-count').textContent = selectedMembers.length;
+    new bootstrap.Modal(document.getElementById('bulkAssignModal')).show();
+}
+
+function confirmBulkAssignment() {
+    const assignmentType = document.getElementById('bulk-assignment-type').value;
+    
+    // Set form values
+    document.getElementById('assignment_type').value = assignmentType;
+    document.getElementById('goals').value = `Bulk assignment for ${assignmentType.replace('_', ' ')} training`;
+    
+    // Close modal and submit form
+    bootstrap.Modal.getInstance(document.getElementById('bulkAssignModal')).hide();
+    document.querySelector('form').submit();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 'a':
+                e.preventDefault();
+                selectAll();
+                break;
+            case 'Escape':
+                clearAll();
+                break;
+        }
+    }
+});
+</script>
+{% endblock %}

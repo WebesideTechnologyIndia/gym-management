@@ -1,0 +1,316 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}Trainers - {{ gym.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user-tie"></i> Trainers - {{ gym.name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'trainer_management:add_trainer' gym_id %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Trainer
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h3>{{ total_trainers }}</h3>
+                <p class="mb-0">Total Trainers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-user-check fa-2x mb-2"></i>
+                <h3>{{ total_assigned_members }}</h3>
+                <p class="mb-0">Assigned Members</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                <h3>{{ total_sessions }}</h3>
+                <p class="mb-0">Total Sessions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h3>Active</h3>
+                <p class="mb-0">This Month</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Search & Filter</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Search by name, phone, or specialization..."
+                           value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Trainers List -->
+<div class="row">
+    {% if trainers %}
+        {% for trainer in trainers %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 trainer-card">
+                <div class="card-body">
+                    <!-- Trainer Photo and Basic Info -->
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            {% if trainer.photo %}
+                                <img src="{{ trainer.photo.url }}" class="rounded-circle" width="60" height="60" alt="Trainer Photo">
+                            {% else %}
+                                <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-user text-white fa-lg"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ trainer.user.get_full_name }}</h5>
+                            <p class="card-text text-muted mb-0">
+                                <small>{{ trainer.specialization|default:"General Trainer" }}</small>
+                            </p>
+                            <p class="card-text mb-0">
+                                <small>
+                                    <i class="fas fa-phone"></i> {{ trainer.phone }}
+                                </small>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Experience and Stats -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <strong>{{ trainer.experience_years }}</strong>
+                                <br>
+                                <small class="text-muted">Years Exp.</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <strong>{{ trainer.assigned_members_count }}</strong>
+                                <br>
+                                <small class="text-muted">Members</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <strong>{{ trainer.active_sessions_count }}</strong>
+                            <br>
+                            <small class="text-muted">Sessions</small>
+                        </div>
+                    </div>
+
+                    <!-- Status and Salary -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="badge bg-{% if trainer.is_active %}success{% else %}danger{% endif %}">
+                                {% if trainer.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                            <span class="badge bg-secondary ms-1">
+                                {{ trainer.get_salary_type_display }}
+                            </span>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">Joined:</small>
+                            <br>
+                            <small>{{ trainer.hire_date|date:"M Y" }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Bio (if exists) -->
+                    {% if trainer.bio %}
+                    <div class="mb-3">
+                        <p class="card-text">
+                            <small>{{ trainer.bio|truncatewords:15 }}</small>
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'trainer_management:trainer_detail' gym_id trainer.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <a href="{% url 'trainer_management:assign_members' gym_id trainer.id %}" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-user-plus"></i> Assign
+                            </a>
+                            <a href="{% url 'trainer_management:trainer_permissions' gym_id trainer.id %}" 
+                               class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-key"></i> Permissions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer with Additional Info -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> 
+                            Last updated: {{ trainer.updated_at|timesince }} ago
+                        </small>
+                        {% if trainer.certifications %}
+                        <small>
+                            <span class="badge bg-info" title="{{ trainer.certifications }}">
+                                <i class="fas fa-certificate"></i> Certified
+                            </span>
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-user-tie fa-4x text-muted mb-3"></i>
+                    <h3 class="text-muted">No Trainers Found</h3>
+                    {% if search_query %}
+                        <p class="text-muted">No trainers match your search criteria.</p>
+                        <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-primary">
+                            <i class="fas fa-times"></i> Clear Search
+                        </a>
+                    {% else %}
+                        <p class="text-muted">Start by adding your first trainer to {{ gym.name }}.</p>
+                        <a href="{% url 'trainer_management:add_trainer' gym_id %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add First Trainer
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Bulk Actions (if needed) -->
+{% if trainers %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'trainer_management:add_trainer' gym_id %}" class="btn btn-primary w-100">
+                            <i class="fas fa-plus"></i> Add New Trainer
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-success w-100" onclick="bulkAssignMembers()">
+                            <i class="fas fa-users"></i> Bulk Assign Members
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-info w-100" onclick="exportTrainerList()">
+                            <i class="fas fa-download"></i> Export List
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-warning w-100" onclick="viewTrainerReports()">
+                            <i class="fas fa-chart-bar"></i> View Reports
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.trainer-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.trainer-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+
+.card-footer {
+    border-top: 1px solid rgba(0,0,0,.125);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function bulkAssignMembers() {
+    // Implement bulk assign functionality
+    alert('Bulk assign functionality coming soon!');
+}
+
+function exportTrainerList() {
+    // Implement export functionality
+    alert('Export functionality coming soon!');
+}
+
+function viewTrainerReports() {
+    // Redirect to trainer reports
+    alert('Trainer reports coming soon!');
+}
+
+// Auto-refresh trainer stats every 2 minutes
+setInterval(function() {
+    // Refresh only the stats section
+    console.log('Auto-refresh trainer stats');
+}, 120000);
+</script>
+{% endblock %}

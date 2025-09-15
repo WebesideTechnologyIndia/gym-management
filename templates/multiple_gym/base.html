@@ -114,6 +114,7 @@
             display: block !important;
         }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body class="bg-light">
@@ -132,7 +133,13 @@
                         <span class="badge bg-secondary ms-1">{{ user.get_user_type_display }}</span>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'logout' %}">
+                        {% if user.user_type == 'trainer' %}
+                        <li><a class="dropdown-item" href="{% url 'trainer_management:trainer_dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>My Dashboard
+                            </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li><a class="dropdown-item" href="{% url 'multiple_gym:logout' %}">
                                 <i class="fas fa-sign-out-alt me-2"></i>Logout
                             </a></li>
                     </ul>
@@ -158,12 +165,12 @@
                     <ul class="nav flex-column">
                         {% if user.user_type == 'superadmin' %}
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="{% url 'superadmin_dashboard' %}">
+                            <a class="nav-link text-white" href="{% url 'multiple_gym:superadmin_dashboard' %}">
                                 <i class="fas fa-tachometer-alt me-2"></i>Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="{% url 'create_gym' %}">
+                            <a class="nav-link text-white" href="{% url 'multiple_gym:create_gym' %}">
                                 <i class="fas fa-plus me-2"></i>Create Gym
                             </a>
                         </li>
@@ -173,11 +180,15 @@
                         {% if gym_id %}
                         <!-- Main Dashboard -->
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="{% url 'gymadmin_dashboard' gym_id %}">
+                            <a class="nav-link text-white" href="{% url 'multiple_gym:gymadmin_dashboard' gym_id %}">
                                 <i class="fas fa-tachometer-alt me-2"></i>Dashboard
                             </a>
                         </li>
 
+                        <!-- Member Management -->
+                        <!-- Member Management -->
+                        <!-- Member Management -->
+                        <!-- Member Management -->
                         <!-- Member Management -->
                         <li class="nav-item">
                             <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#memberSubmenu" role="button" aria-expanded="false" aria-controls="memberSubmenu">
@@ -187,23 +198,45 @@
                             <div class="collapse submenu" id="memberSubmenu">
                                 <ul class="nav flex-column">
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'add_member' gym_id %}">
+                                        <a class="nav-link text-white" href="{% url 'multiple_gym:add_member' gym_id %}">
                                             <i class="fas fa-user-plus me-2"></i>Add Member
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'gym_detail' gym_id %}">
+                                        <a class="nav-link text-white" href="{% url 'multiple_gym:gym_detail' gym_id %}">
                                             <i class="fas fa-users me-2"></i>View Members
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'create_membership' %}">
+                                        <a class="nav-link text-white" href="{% url 'multiple_gym:create_membership' %}">
                                             <i class="fas fa-id-card me-2"></i>Create Membership
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'membership_list' %}">
+                                        <a class="nav-link text-white" href="{% url 'multiple_gym:membership_list' %}">
                                             <i class="fas fa-list me-2"></i>View Memberships
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Trainer Management -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#trainerSubmenu" role="button" aria-expanded="false" aria-controls="trainerSubmenu">
+                                <i class="fas fa-user-tie me-2"></i>Trainer Management
+                                <i class="fas fa-chevron-down collapse-icon"></i>
+                            </a>
+                            <div class="collapse submenu" id="trainerSubmenu">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'trainer_management:trainer_list' gym_id %}">
+                                            <i class="fas fa-users me-2"></i>View Trainers
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'trainer_management:add_trainer' gym_id %}">
+                                            <i class="fas fa-user-plus me-2"></i>Add Trainer
                                         </a>
                                     </li>
                                 </ul>
@@ -250,7 +283,6 @@
                                                 </li>
                                                 <li class="nav-item">
                                                    <a class="nav-link text-white"  href="{% url 'inventory:add_equipment_category' gym_id=gym_id %}"> <i class="fas fa-tags me-2"></i>Add Category</a>
-
                                                 </li>
                                             </ul>
                                         </div>
@@ -311,12 +343,12 @@
                             <div class="collapse submenu" id="plansSubmenu">
                                 <ul class="nav flex-column">
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'create_plan' %}">
+                                        <a class="nav-link text-white" href="{% url 'multiple_gym:create_plan' %}">
                                             <i class="fas fa-plus me-2"></i>Create Plan
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link text-white" href="{% url 'plan_list' %}">
+                                        <a class="nav-link text-white" href="{% url 'multiple_gym:plan_list' %}">
                                             <i class="fas fa-list me-2"></i>View Plans
                                         </a>
                                     </li>
@@ -348,11 +380,46 @@
 
                         <!-- Gym Details -->
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="{% url 'gym_detail' gym_id %}">
+                            <a class="nav-link text-white" href="{% url 'multiple_gym:gym_detail' gym_id %}">
                                 <i class="fas fa-building me-2"></i>Gym Details
                             </a>
                         </li>
                         {% endif %}
+
+                        {% elif user.user_type == 'trainer' %}
+                        <!-- Trainer Navigation -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'trainer_management:trainer_dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link text-white collapse-toggle" data-bs-toggle="collapse" href="#trainerSessionSubmenu" role="button" aria-expanded="false" aria-controls="trainerSessionSubmenu">
+                                <i class="fas fa-calendar-alt me-2"></i>My Sessions
+                                <i class="fas fa-chevron-down collapse-icon"></i>
+                            </a>
+                            <div class="collapse submenu" id="trainerSessionSubmenu">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'trainer_management:session_list' %}">
+                                            <i class="fas fa-list me-2"></i>All Sessions
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-white" href="{% url 'trainer_management:create_session' %}">
+                                            <i class="fas fa-plus me-2"></i>Create Session
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="#" onclick="viewMyMembers()">
+                                <i class="fas fa-users me-2"></i>My Members
+                            </a>
+                        </li>
 
                         {% endif %}
                     </ul>
@@ -418,6 +485,19 @@
         // Dashboard
         if (currentPath.includes('/dashboard/')) {
             setActiveLink('a[href*="dashboard"]');
+        }
+        
+        // Trainer Management
+        if (currentPath.includes('/trainer/')) {
+            if (currentPath.includes('/trainer_management/')) {
+                // Gym admin trainer management
+                expandSubmenu('trainerSubmenu', 'a[href="#trainerSubmenu"]');
+            } else {
+                // Trainer's own pages
+                if (currentPath.includes('/session')) {
+                    expandSubmenu('trainerSessionSubmenu', 'a[href="#trainerSessionSubmenu"]');
+                }
+            }
         }
         
         // Inventory Management
@@ -518,6 +598,8 @@
                 'equipmentSubmenu': ['/equipment/', '/category/'],
                 'maintenanceSubmenu': ['/maintenance/'],
                 'memberSubmenu': ['/member/', '/membership/', '/add_member/'],
+                'trainerSubmenu': ['/trainer_management/'],
+                'trainerSessionSubmenu': ['/trainer/session'],
                 'plansSubmenu': ['/plan/'],
                 'reportsSubmenu': ['/reports/']
             };
@@ -526,7 +608,15 @@
             return relevantPaths && relevantPaths.some(p => path.includes(p));
         }
     });
+
+    // Trainer-specific functions
+    function viewMyMembers() {
+        // This would redirect to a filtered view of members assigned to the logged-in trainer
+        alert('Feature coming soon: View your assigned members');
+    }
     </script>
+    
+    {% block extra_js %}{% endblock %}
 </body>
 
 </html>
