@@ -1,13 +1,24 @@
 {% extends 'multiple_gym/base.html' %}
 
-{% block title %}Add Trainer - {{ gym.name }}{% endblock %}
+{% block title %}
+{% if edit_mode %}Edit Trainer - {{ trainer.user.get_full_name }}{% else %}Add Trainer - {{ gym.name }}{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="fas fa-user-plus"></i> Add Trainer - {{ gym.name }}
+        {% if edit_mode %}
+            <i class="fas fa-user-edit"></i> Edit Trainer - {{ trainer.user.get_full_name }}
+        {% else %}
+            <i class="fas fa-user-plus"></i> Add Trainer - {{ gym.name }}
+        {% endif %}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
+        {% if edit_mode %}
+            <a href="{% url 'trainer_management:trainer_detail' gym_id trainer.id %}" class="btn btn-outline-info me-2">
+                <i class="fas fa-eye"></i> View Details
+            </a>
+        {% endif %}
         <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Back to Trainers
         </a>
@@ -20,89 +31,139 @@
     <div class="row">
         <!-- Personal Information -->
         <div class="col-md-8">
-            <!-- Personal Information Section - YEH MISSING THA! -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-user"></i> Personal Information
-        </h5>
-    </div>
-    <div class="card-body">
-        <!-- Name Fields Row -->
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <label for="username" class="form-label">Username *</label>
-                <input type="text" class="form-control" id="username" name="username" required>
-                <div class="invalid-feedback">Please provide a username.</div>
-                <small class="text-muted">Used for login</small>
-            </div>
-            <div class="col-md-4">
-                <label for="first_name" class="form-label">First Name *</label>
-                <input type="text" class="form-control" id="first_name" name="first_name" required>
-                <div class="invalid-feedback">Please provide first name.</div>
-            </div>
-            <div class="col-md-4">
-                <label for="last_name" class="form-label">Last Name *</label>
-                <input type="text" class="form-control" id="last_name" name="last_name" required>
-                <div class="invalid-feedback">Please provide last name.</div>
-            </div>
-        </div>
-
-        <!-- Email and Password Row -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="email" class="form-label">Email Address *</label>
-                <input type="email" class="form-control" id="email" name="email" required>
-                <div class="invalid-feedback">Please provide a valid email.</div>
-            </div>
-            <div class="col-md-6">
-                <label for="password" class="form-label">Password</label>
-                <div class="input-group">
-                    <input type="password" class="form-control" id="password" name="password">
-                    <button class="btn btn-outline-secondary" type="button" onclick="generatePassword()">
-                        <i class="fas fa-random"></i> Generate
-                    </button>
+            <!-- Personal Information Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user"></i> Personal Information
+                    </h5>
                 </div>
-                <small class="text-muted">Leave blank to auto-generate</small>
-            </div>
-        </div>
+                <div class="card-body">
+                    <!-- Name Fields Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                    <h6><i class="fas fa-certificate me-2"></i>Certifications</h6>
+                    <p class="small">${formData.get('certifications').replace(/\n/g, '<br>')}</p>
+                </div>
+        
+                            <label for="username" class="form-label">Username *</label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   value="{% if edit_mode %}{{ trainer.user.username }}{% endif %}" required>
+                            <div class="invalid-feedback">Please provide a username.</div>
+                            <small class="text-muted">Used for login</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="first_name" class="form-label">First Name *</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" 
+                                   value="{% if edit_mode %}{{ trainer.user.first_name }}{% endif %}" required>
+                            <div class="invalid-feedback">Please provide first name.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="last_name" class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" 
+                                   value="{% if edit_mode %}{{ trainer.user.last_name }}{% endif %}" required>
+                            <div class="invalid-feedback">Please provide last name.</div>
+                        </div>
+                    </div>
 
-        <!-- Phone and DOB Row -->
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <label for="phone" class="form-label">Phone Number *</label>
-                <input type="tel" class="form-control" id="phone" name="phone" required pattern="[0-9]{10}">
-                <div class="invalid-feedback">Please provide a 10-digit phone number.</div>
-            </div>
-            <div class="col-md-4">
-                <label for="alternate_phone" class="form-label">Alternate Phone</label>
-                <input type="tel" class="form-control" id="alternate_phone" name="alternate_phone" pattern="[0-9]{10}">
-            </div>
-            <div class="col-md-4">
-                <label for="date_of_birth" class="form-label">Date of Birth</label>
-                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
-            </div>
-        </div>
+                    <!-- Email and Password Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{% if edit_mode %}{{ trainer.user.email }}{% endif %}" required>
+                            <div class="invalid-feedback">Please provide a valid email.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="password" name="password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="generatePassword()">
+                                    <i class="fas fa-random"></i> Generate
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                {% if edit_mode %}Leave blank to keep current password{% else %}Leave blank to auto-generate{% endif %}
+                            </small>
+                        </div>
+                    </div>
 
-        <!-- Gender and Photo Row -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="gender" class="form-label">Gender</label>
-                <select class="form-select" id="gender" name="gender">
-                    <option value="">Select Gender</option>
-                    <option value="M">Male</option>
-                    <option value="F">Female</option>
-                    <option value="O">Other</option>
-                </select>
+                    <!-- Phone and DOB Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="phone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{% if edit_mode %}{{ trainer.phone }}{% endif %}" required pattern="[0-9]{10}">
+                            <div class="invalid-feedback">Please provide a 10-digit phone number.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="alternate_phone" class="form-label">Alternate Phone</label>
+                            <input type="tel" class="form-control" id="alternate_phone" name="alternate_phone" 
+                                   value="{% if edit_mode %}{{ trainer.alternate_phone }}{% endif %}" pattern="[0-9]{10}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date_of_birth" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" 
+                                   value="{% if edit_mode and trainer.date_of_birth %}{{ trainer.date_of_birth|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                    </div>
+
+                    <!-- Gender and Photo Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select class="form-select" id="gender" name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="M" {% if edit_mode and trainer.gender == 'M' %}selected{% endif %}>Male</option>
+                                <option value="F" {% if edit_mode and trainer.gender == 'F' %}selected{% endif %}>Female</option>
+                                <option value="O" {% if edit_mode and trainer.gender == 'O' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="photo" class="form-label">Profile Photo</label>
+                            <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                            {% if edit_mode and trainer.photo %}
+                                <small class="text-muted">Current photo: <a href="{{ trainer.photo.url }}" target="_blank">View</a></small>
+                            {% else %}
+                                <small class="text-muted">Optional: Upload trainer's photo</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Address Section -->
+                    <div class="mb-3">
+                        <label for="address_line1" class="form-label">Address Line 1</label>
+                        <input type="text" class="form-control" id="address_line1" name="address_line1" 
+                               value="{% if edit_mode %}{{ trainer.address_line1 }}{% endif %}">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="address_line2" class="form-label">Address Line 2</label>
+                            <input type="text" class="form-control" id="address_line2" name="address_line2" 
+                                   value="{% if edit_mode %}{{ trainer.address_line2 }}{% endif %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city" name="city" 
+                                   value="{% if edit_mode %}{{ trainer.city }}{% endif %}">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="state" class="form-label">State</label>
+                            <input type="text" class="form-control" id="state" name="state" 
+                                   value="{% if edit_mode %}{{ trainer.state }}{% endif %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="pin_code" class="form-label">PIN Code</label>
+                            <input type="text" class="form-control" id="pin_code" name="pin_code" 
+                                   value="{% if edit_mode %}{{ trainer.pin_code }}{% endif %}" pattern="[0-9]{6}">
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6">
-                <label for="photo" class="form-label">Profile Photo</label>
-                <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
-                <small class="text-muted">Optional: Upload trainer's photo</small>
-            </div>
-        </div>
-    </div>
-</div>
         </div>
 
         <!-- Professional Information & Permissions -->
@@ -118,6 +179,7 @@
                     <div class="mb-3">
                         <label for="specialization" class="form-label">Specialization</label>
                         <input type="text" class="form-control" id="specialization" name="specialization" 
+                               value="{% if edit_mode %}{{ trainer.specialization }}{% endif %}"
                                placeholder="e.g., Weight Training, Yoga, Cardio">
                         <small class="text-muted">Primary area of expertise</small>
                     </div>
@@ -125,25 +187,25 @@
                     <div class="mb-3">
                         <label for="experience_years" class="form-label">Experience (Years)</label>
                         <input type="number" class="form-control" id="experience_years" name="experience_years" 
-                               min="0" max="50" value="0">
+                               min="0" max="50" value="{% if edit_mode %}{{ trainer.experience_years }}{% else %}0{% endif %}">
                     </div>
 
                     <div class="mb-3">
                         <label for="hire_date" class="form-label">Hire Date</label>
                         <input type="date" class="form-control" id="hire_date" name="hire_date" 
-                               value="{{ today|date:'Y-m-d' }}">
+                               value="{% if edit_mode %}{{ trainer.hire_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}">
                     </div>
 
                     <div class="mb-3">
                         <label for="certifications" class="form-label">Certifications</label>
                         <textarea class="form-control" id="certifications" name="certifications" rows="3"
-                                  placeholder="List relevant certifications..."></textarea>
+                                  placeholder="List relevant certifications...">{% if edit_mode %}{{ trainer.certifications }}{% endif %}</textarea>
                     </div>
 
                     <div class="mb-3">
                         <label for="bio" class="form-label">Bio/Description</label>
                         <textarea class="form-control" id="bio" name="bio" rows="4"
-                                  placeholder="Brief professional bio..."></textarea>
+                                  placeholder="Brief professional bio...">{% if edit_mode %}{{ trainer.bio }}{% endif %}</textarea>
                     </div>
                 </div>
             </div>
@@ -159,17 +221,18 @@
                     <div class="mb-3">
                         <label for="salary_type" class="form-label">Salary Type</label>
                         <select class="form-select" id="salary_type" name="salary_type">
-                            <option value="fixed">Fixed Monthly</option>
-                            <option value="hourly">Per Hour</option>
-                            <option value="session">Per Session</option>
-                            <option value="commission">Commission Based</option>
+                            <option value="fixed" {% if edit_mode and trainer.salary_type == 'fixed' %}selected{% endif %}>Fixed Monthly</option>
+                            <option value="hourly" {% if edit_mode and trainer.salary_type == 'hourly' %}selected{% endif %}>Per Hour</option>
+                            <option value="session" {% if edit_mode and trainer.salary_type == 'session' %}selected{% endif %}>Per Session</option>
+                            <option value="commission" {% if edit_mode and trainer.salary_type == 'commission' %}selected{% endif %}>Commission Based</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
                         <label for="salary_amount" class="form-label">Amount (₹)</label>
                         <input type="number" class="form-control" id="salary_amount" name="salary_amount" 
-                               min="0" step="0.01" placeholder="0.00">
+                               min="0" step="0.01" placeholder="0.00" 
+                               value="{% if edit_mode %}{{ trainer.salary_amount }}{% endif %}">
                         <small class="text-muted">Based on selected salary type</small>
                     </div>
                 </div>
@@ -184,70 +247,80 @@
                 </div>
                 <div class="card-body">
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_create_members" name="can_create_members">
+                        <input class="form-check-input" type="checkbox" id="can_create_members" name="can_create_members"
+                               {% if edit_mode and permissions and permissions.can_create_members %}checked{% endif %}>
                         <label class="form-check-label" for="can_create_members">
                             Can Create Members
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_edit_members" name="can_edit_members">
+                        <input class="form-check-input" type="checkbox" id="can_edit_members" name="can_edit_members"
+                               {% if edit_mode and permissions and permissions.can_edit_members %}checked{% endif %}>
                         <label class="form-check-label" for="can_edit_members">
                             Can Edit Members
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_view_all_members" name="can_view_all_members" checked>
+                        <input class="form-check-input" type="checkbox" id="can_view_all_members" name="can_view_all_members"
+                               {% if edit_mode and permissions and permissions.can_view_all_members %}checked{% elif not edit_mode %}checked{% endif %}>
                         <label class="form-check-label" for="can_view_all_members">
                             Can View All Members
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_create_sessions" name="can_create_sessions" checked>
+                        <input class="form-check-input" type="checkbox" id="can_create_sessions" name="can_create_sessions"
+                               {% if edit_mode and permissions and permissions.can_create_sessions %}checked{% elif not edit_mode %}checked{% endif %}>
                         <label class="form-check-label" for="can_create_sessions">
                             Can Create Sessions
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_edit_sessions" name="can_edit_sessions" checked>
+                        <input class="form-check-input" type="checkbox" id="can_edit_sessions" name="can_edit_sessions"
+                               {% if edit_mode and permissions and permissions.can_edit_sessions %}checked{% elif not edit_mode %}checked{% endif %}>
                         <label class="form-check-label" for="can_edit_sessions">
                             Can Edit Sessions
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_delete_sessions" name="can_delete_sessions">
+                        <input class="form-check-input" type="checkbox" id="can_delete_sessions" name="can_delete_sessions"
+                               {% if edit_mode and permissions and permissions.can_delete_sessions %}checked{% endif %}>
                         <label class="form-check-label" for="can_delete_sessions">
                             Can Delete Sessions
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_upload_content" name="can_upload_content" checked>
+                        <input class="form-check-input" type="checkbox" id="can_upload_content" name="can_upload_content"
+                               {% if edit_mode and permissions and permissions.can_upload_content %}checked{% elif not edit_mode %}checked{% endif %}>
                         <label class="form-check-label" for="can_upload_content">
                             Can Upload Content
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_manage_assignments" name="can_manage_assignments">
+                        <input class="form-check-input" type="checkbox" id="can_manage_assignments" name="can_manage_assignments"
+                               {% if edit_mode and permissions and permissions.can_manage_assignments %}checked{% endif %}>
                         <label class="form-check-label" for="can_manage_assignments">
                             Can Manage Assignments
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_view_reports" name="can_view_reports">
+                        <input class="form-check-input" type="checkbox" id="can_view_reports" name="can_view_reports"
+                               {% if edit_mode and permissions and permissions.can_view_reports %}checked{% endif %}>
                         <label class="form-check-label" for="can_view_reports">
                             Can View Reports
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="can_view_payments" name="can_view_payments">
+                        <input class="form-check-input" type="checkbox" id="can_view_payments" name="can_view_payments"
+                               {% if edit_mode and permissions and permissions.can_view_payments %}checked{% endif %}>
                         <label class="form-check-label" for="can_view_payments">
                             Can View Payments
                         </label>
@@ -264,20 +337,31 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
+                            {% if not edit_mode %}
                             <button type="button" class="btn btn-secondary me-2" onclick="resetForm()">
                                 <i class="fas fa-undo"></i> Reset Form
                             </button>
+                            {% endif %}
                             <button type="button" class="btn btn-info me-2" onclick="previewTrainer()">
                                 <i class="fas fa-eye"></i> Preview
                             </button>
                         </div>
                         <div>
-                            <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-secondary me-2">
-                                <i class="fas fa-times"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> Create Trainer
-                            </button>
+                            {% if edit_mode %}
+                                <a href="{% url 'trainer_management:trainer_detail' gym_id trainer.id %}" class="btn btn-outline-secondary me-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Update Trainer
+                                </button>
+                            {% else %}
+                                <a href="{% url 'trainer_management:trainer_list' gym_id %}" class="btn btn-outline-secondary me-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Create Trainer
+                                </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -291,7 +375,9 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Trainer Preview</h5>
+                <h5 class="modal-title">
+                    {% if edit_mode %}Update Trainer Preview{% else %}Trainer Preview{% endif %}
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="previewContent">
@@ -299,7 +385,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="submitForm()">Create Trainer</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    {% if edit_mode %}Update Trainer{% else %}Create Trainer{% endif %}
+                </button>
             </div>
         </div>
     </div>
@@ -339,11 +427,54 @@
     content: " *";
     color: #dc3545;
 }
+
+/* Edit mode highlighting */
+.edit-mode .card-header {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+/* Change indicator */
+.border-warning {
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+/* Loading state */
+.btn.loading {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Tooltip styles */
+.tooltip-icon {
+    cursor: help;
+    margin-left: 5px;
+    color: #6c757d;
+}
+
+/* Photo preview */
+.photo-preview {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Add edit mode class to body
+{% if edit_mode %}
+document.body.classList.add('edit-mode');
+{% endif %}
+
+// Global variables
+let hasUnsavedChanges = false;
+let originalFormData = {};
+let autoSaveTimeout;
+
 // Form validation
 (function() {
     'use strict';
@@ -354,6 +485,14 @@
                 if (form.checkValidity() === false) {
                     event.preventDefault();
                     event.stopPropagation();
+                    showToast('Please fix the validation errors before submitting.', 'error');
+                } else {
+                    // Show loading state
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    submitBtn.classList.add('loading');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                    hasUnsavedChanges = false;
                 }
                 form.classList.add('was-validated');
             }, false);
@@ -363,28 +502,64 @@
 
 // Generate random password
 function generatePassword() {
-    const length = 8;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
     let password = "";
-    for (let i = 0; i < length; i++) {
+    
+    // Ensure at least one of each type
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*";
+    
+    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    password += symbols.charAt(Math.floor(Math.random() * symbols.length));
+    
+    // Fill the rest randomly
+    for (let i = 4; i < length; i++) {
         password += charset.charAt(Math.floor(Math.random() * charset.length));
     }
+    
+    // Shuffle the password
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    
     document.getElementById('password').value = password;
     
-    // Show password temporarily
+    // Show password temporarily with visual feedback
     const passwordField = document.getElementById('password');
+    const originalType = passwordField.type;
     passwordField.type = 'text';
+    passwordField.classList.add('border-success');
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(password).then(() => {
+        showToast('Password generated and copied to clipboard!', 'success');
+    });
+    
     setTimeout(function() {
-        passwordField.type = 'password';
+        passwordField.type = originalType;
+        passwordField.classList.remove('border-success');
     }, 3000);
 }
 
-// Reset form
+// Reset form (only in add mode)
 function resetForm() {
-    if (confirm('Are you sure you want to reset all fields?')) {
+    {% if not edit_mode %}
+    if (confirm('Are you sure you want to reset all fields? All data will be lost.')) {
         document.querySelector('form').reset();
         document.querySelector('form').classList.remove('was-validated');
+        hasUnsavedChanges = false;
+        
+        // Reset all change indicators
+        document.querySelectorAll('.border-warning').forEach(el => {
+            el.classList.remove('border-warning');
+        });
+        
+        showToast('Form has been reset.', 'info');
     }
+    {% endif %}
 }
 
 // Preview trainer data
@@ -393,28 +568,40 @@ function previewTrainer() {
     let previewHTML = `
         <div class="row">
             <div class="col-md-6">
-                <h6>Personal Information</h6>
-                <p><strong>Name:</strong> ${formData.get('first_name')} ${formData.get('last_name')}</p>
-                <p><strong>Username:</strong> ${formData.get('username')}</p>
-                <p><strong>Email:</strong> ${formData.get('email')}</p>
-                <p><strong>Phone:</strong> ${formData.get('phone')}</p>
-                <p><strong>Gender:</strong> ${formData.get('gender') || 'Not specified'}</p>
-                <p><strong>Date of Birth:</strong> ${formData.get('date_of_birth') || 'Not specified'}</p>
+                <h6><i class="fas fa-user me-2"></i>Personal Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Name:</strong></td><td>${formData.get('first_name')} ${formData.get('last_name')}</td></tr>
+                    <tr><td><strong>Username:</strong></td><td>${formData.get('username')}</td></tr>
+                    <tr><td><strong>Email:</strong></td><td>${formData.get('email')}</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>${formData.get('phone')}</td></tr>
+                    <tr><td><strong>Gender:</strong></td><td>${formData.get('gender') || 'Not specified'}</td></tr>
+                    <tr><td><strong>Date of Birth:</strong></td><td>${formData.get('date_of_birth') || 'Not specified'}</td></tr>
+                </table>
             </div>
             <div class="col-md-6">
-                <h6>Professional Information</h6>
-                <p><strong>Specialization:</strong> ${formData.get('specialization') || 'Not specified'}</p>
-                <p><strong>Experience:</strong> ${formData.get('experience_years')} years</p>
-                <p><strong>Hire Date:</strong> ${formData.get('hire_date')}</p>
-                <p><strong>Salary Type:</strong> ${formData.get('salary_type')}</p>
-                <p><strong>Salary Amount:</strong> ₹${formData.get('salary_amount') || '0'}</p>
+                <h6><i class="fas fa-briefcase me-2"></i>Professional Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Specialization:</strong></td><td>${formData.get('specialization') || 'Not specified'}</td></tr>
+                    <tr><td><strong>Experience:</strong></td><td>${formData.get('experience_years')} years</td></tr>
+                    <tr><td><strong>Hire Date:</strong></td><td>${formatDate(formData.get('hire_date'))}</td></tr>
+                    <tr><td><strong>Salary Type:</strong></td><td>${getSalaryTypeDisplay(formData.get('salary_type'))}</td></tr>
+                    <tr><td><strong>Salary Amount:</strong></td><td>₹${Number(formData.get('salary_amount') || 0).toLocaleString()}</td></tr>
+                </table>
             </div>
         </div>
         <hr>
         <div class="row">
-            <div class="col-12">
-                <h6>Permissions</h6>
-                <ul class="list-unstyled">
+            <div class="col-md-6">
+                <h6><i class="fas fa-map-marker-alt me-2"></i>Address</h6>
+                <p class="mb-1">${formData.get('address_line1') || 'Not provided'}</p>
+                ${formData.get('address_line2') ? '<p class="mb-1">' + formData.get('address_line2') + '</p>' : ''}
+                <p class="mb-0">${[formData.get('city'), formData.get('state'), formData.get('pin_code')].filter(Boolean).join(', ') || 'Not provided'}</p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-key me-2"></i>Permissions</h6>
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="list-unstyled mb-0">
     `;
     
     const permissions = [
@@ -426,58 +613,536 @@ function previewTrainer() {
     permissions.forEach(permission => {
         if (formData.get(permission)) {
             const label = permission.replace('can_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            previewHTML += `<li><i class="fas fa-check text-success"></i> ${label}</li>`;
+            previewHTML += `<li class="mb-1"><i class="fas fa-check text-success me-2"></i>${label}</li>`;
         }
     });
     
     previewHTML += `
-                </ul>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     `;
+    
+    // Add bio and certifications if provided
+    if (formData.get('bio') || formData.get('certifications')) {
+        previewHTML += '<hr><div class="row">';
+        
+        if (formData.get('bio')) {
+            previewHTML += `
+                <div class="col-md-6">
+                    <h6><i class="fas fa-info-circle me-2"></i>Bio</h6>
+                    <p class="small">${formData.get('bio')}</p>
+                </div>
+            `;
+        }
+        
+        if (formData.get('certifications')) {
+            previewHTML += `
+                <div class="col-md-6">
+                    <h6><i class="fas fa-certificate me-2"></i>Certifications</h6>
+                    <p class="small">${formData.get('certifications').replace(/\n/g, '<br>')}</p>
+                </div>
+            `;
+        }
+        
+        previewHTML += '</div>';
+    }
     
     document.getElementById('previewContent').innerHTML = previewHTML;
     new bootstrap.Modal(document.getElementById('previewModal')).show();
 }
 
+// Helper functions for preview
+function formatDate(dateString) {
+    if (!dateString) return 'Not specified';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+}
+
+function getSalaryTypeDisplay(type) {
+    const types = {
+        'fixed': 'Fixed Monthly',
+        'hourly': 'Per Hour',
+        'session': 'Per Session',
+        'commission': 'Commission Based'
+    };
+    return types[type] || type;
+}
+
 // Submit form from modal
 function submitForm() {
     document.querySelector('form').submit();
+    const modal = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
+    modal.hide();
 }
 
-// Real-time validation
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast');
+    existingToasts.forEach(toast => toast.remove());
+    
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} border-0 position-fixed" 
+             style="top: 20px; right: 20px; z-index: 1060;" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', toastHtml);
+    const toast = new bootstrap.Toast(document.querySelector('.toast'));
+    toast.show();
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        const toastElement = document.querySelector('.toast');
+        if (toastElement) {
+            toastElement.remove();
+        }
+    }, 5000);
+}
+
+// Validate form
+function validateForm() {
+    const form = document.querySelector('form');
+    const isValid = form.checkValidity();
+    
+    if (!isValid) {
+        form.classList.add('was-validated');
+        const firstInvalid = form.querySelector(':invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+    
+    return isValid;
+}
+
+// Auto-capitalize first letter of names
+function capitalizeFirstLetter(input) {
+    input.addEventListener('input', function() {
+        const words = this.value.split(' ');
+        const capitalizedWords = words.map(word => {
+            if (word.length > 0) {
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            }
+            return word;
+        });
+        this.value = capitalizedWords.join(' ');
+    });
+}
+
+// Auto-save indicator
+function showAutoSaveIndicator() {
+    const indicator = document.createElement('div');
+    indicator.className = 'position-fixed bg-secondary text-white px-3 py-2 rounded';
+    indicator.style.cssText = 'top: 80px; right: 20px; z-index: 1050; font-size: 0.875rem;';
+    indicator.innerHTML = '<i class="fas fa-save me-2"></i>Changes detected';
+    
+    document.body.appendChild(indicator);
+    
+    setTimeout(() => {
+        if (indicator.parentNode) {
+            indicator.remove();
+        }
+    }, 2000);
+}
+
+// Form auto-save draft functionality (for edit mode)
+{% if edit_mode %}
+function saveDraft() {
+    const formData = new FormData(document.querySelector('form'));
+    const draftData = {};
+    
+    for (let [key, value] of formData.entries()) {
+        draftData[key] = value;
+    }
+    
+    localStorage.setItem('trainer_edit_draft_{{ trainer.id }}', JSON.stringify(draftData));
+    showToast('Draft saved locally', 'info');
+}
+
+function loadDraft() {
+    const draftData = localStorage.getItem('trainer_edit_draft_{{ trainer.id }}');
+    if (draftData) {
+        try {
+            const data = JSON.parse(draftData);
+            Object.keys(data).forEach(key => {
+                const field = document.querySelector(`[name="${key}"]`);
+                if (field) {
+                    if (field.type === 'checkbox') {
+                        field.checked = data[key] === 'on';
+                    } else {
+                        field.value = data[key];
+                    }
+                }
+            });
+            showToast('Draft loaded from local storage', 'info');
+        } catch (e) {
+            console.error('Error loading draft:', e);
+        }
+    }
+}
+{% endif %}
+
+// Quick fill demo data (for testing - remove in production)
+function fillDemoData() {
+    if (confirm('Fill form with demo data? This will overwrite current data.')) {
+        document.getElementById('username').value = 'demo_trainer_' + Date.now();
+        document.getElementById('first_name').value = 'John';
+        document.getElementById('last_name').value = 'Doe';
+        document.getElementById('email').value = 'john.doe@example.com';
+        document.getElementById('phone').value = '9876543210';
+        document.getElementById('specialization').value = 'Weight Training';
+        document.getElementById('experience_years').value = '5';
+        document.getElementById('salary_amount').value = '25000.00';
+        document.getElementById('bio').value = 'Experienced fitness trainer with expertise in weight training and cardio workouts.';
+        
+        // Check some permissions
+        document.getElementById('can_view_all_members').checked = true;
+        document.getElementById('can_create_sessions').checked = true;
+        document.getElementById('can_edit_sessions').checked = true;
+        
+        showToast('Demo data filled successfully!', 'success');
+    }
+}
+
+// Real-time validation and change detection
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const formInputs = document.querySelectorAll('input, select, textarea');
+    
+    // Store original form data for comparison
+    {% if edit_mode %}
+    formInputs.forEach(input => {
+        const key = input.name;
+        if (input.type === 'checkbox') {
+            originalFormData[key] = input.checked;
+        } else {
+            originalFormData[key] = input.value;
+        }
+    });
+    {% endif %}
+    
+    // Apply capitalization to name fields
+    capitalizeFirstLetter(document.getElementById('first_name'));
+    capitalizeFirstLetter(document.getElementById('last_name'));
+    
     // Username validation
     const usernameField = document.getElementById('username');
     usernameField.addEventListener('blur', function() {
-        const username = this.value;
+        const username = this.value.trim();
         if (username.length < 3) {
             this.setCustomValidity('Username must be at least 3 characters long');
+            this.classList.add('is-invalid');
+        } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            this.setCustomValidity('Username can only contain letters, numbers, and underscores');
+            this.classList.add('is-invalid');
         } else {
             this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
         }
     });
     
     // Email validation
     const emailField = document.getElementById('email');
     emailField.addEventListener('blur', function() {
-        const email = this.value;
+        const email = this.value.trim();
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             this.setCustomValidity('Please enter a valid email address');
+            this.classList.add('is-invalid');
         } else {
             this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
         }
     });
     
     // Phone validation
     const phoneField = document.getElementById('phone');
     phoneField.addEventListener('input', function() {
+        // Remove non-digits
+        this.value = this.value.replace(/\D/g, '');
+        
+        // Limit to 10 digits
+        if (this.value.length > 10) {
+            this.value = this.value.slice(0, 10);
+        }
+        
+        // Validate length
+        if (this.value.length === 10) {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else if (this.value.length > 0) {
+            this.setCustomValidity('Phone number must be exactly 10 digits');
+            this.classList.add('is-invalid');
+            this.classList.remove('is-valid');
+        }
+    });
+    
+    // Alternate phone validation
+    const altPhoneField = document.getElementById('alternate_phone');
+    altPhoneField.addEventListener('input', function() {
         this.value = this.value.replace(/\D/g, '');
         if (this.value.length > 10) {
             this.value = this.value.slice(0, 10);
         }
     });
+    
+    // PIN code validation
+    const pinCodeField = document.getElementById('pin_code');
+    pinCodeField.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+        if (this.value.length > 6) {
+            this.value = this.value.slice(0, 6);
+        }
+    });
+    
+    // Salary amount formatting
+    const salaryAmount = document.getElementById('salary_amount');
+    salaryAmount.addEventListener('input', function() {
+        // Remove any non-digit characters except decimal point
+        this.value = this.value.replace(/[^\d.]/g, '');
+        
+        // Ensure only one decimal point
+        const parts = this.value.split('.');
+        if (parts.length > 2) {
+            this.value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // Limit decimal places to 2
+        if (parts[1] && parts[1].length > 2) {
+            this.value = parseFloat(this.value).toFixed(2);
+        }
+    });
+    
+    salaryAmount.addEventListener('blur', function() {
+        if (this.value && !isNaN(this.value)) {
+            this.value = parseFloat(this.value).toFixed(2);
+        }
+    });
+    
+    // Photo preview
+    const photoField = document.getElementById('photo');
+    photoField.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select a valid image file.', 'error');
+                this.value = '';
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image size should be less than 5MB.', 'error');
+                this.value = '';
+                return;
+            }
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Remove existing preview
+                const existingPreview = document.querySelector('.photo-preview');
+                if (existingPreview) {
+                    existingPreview.remove();
+                }
+                
+                // Create new preview
+                const preview = document.createElement('img');
+                preview.src = e.target.result;
+                preview.className = 'photo-preview';
+                preview.alt = 'Photo Preview';
+                photoField.parentNode.appendChild(preview);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Change detection for edit mode
+    {% if edit_mode %}
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const currentValue = input.type === 'checkbox' ? input.checked : input.value;
+            const originalValue = originalFormData[input.name];
+            
+            if (currentValue !== originalValue) {
+                input.classList.add('border-warning');
+                hasUnsavedChanges = true;
+            } else {
+                input.classList.remove('border-warning');
+            }
+            
+            // Check if any changes remain
+            let anyChanges = false;
+            formInputs.forEach(inp => {
+                if (inp.classList.contains('border-warning')) {
+                    anyChanges = true;
+                }
+            });
+            hasUnsavedChanges = anyChanges;
+            
+            // Auto-save after 3 seconds of inactivity
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                if (hasUnsavedChanges) {
+                    showAutoSaveIndicator();
+                }
+            }, 3000);
+        });
+    });
+    
+    // Check for draft data
+    if (localStorage.getItem('trainer_edit_draft_{{ trainer.id }}')) {
+        if (confirm('A draft was found. Would you like to load it?')) {
+            loadDraft();
+        }
+    }
+    
+    // Clear draft on successful submission
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('trainer_edit_draft_{{ trainer.id }}');
+    });
+    {% endif %}
+    
+    // Form submission enhancements
+    form.addEventListener('submit', function(e) {
+        // Prevent double submission
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn.disabled) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Final validation
+        const requiredFields = this.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            showToast('Please fill in all required fields.', 'error');
+            return false;
+        }
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        
+        // Reset on error (if form doesn't actually submit)
+        setTimeout(() => {
+            if (submitBtn.disabled) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }, 10000);
+    });
+    
+    // Auto-focus on first empty required field
+    const firstEmptyRequired = form.querySelector('[required]:not([value]):not([checked])');
+    if (firstEmptyRequired && !{% if edit_mode %}true{% else %}false{% endif %}) {
+        firstEmptyRequired.focus();
+    }
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Add keyboard shortcut hints
+    const shortcutHelp = document.createElement('div');
+    shortcutHelp.className = 'position-fixed bg-dark text-white px-2 py-1 rounded small';
+    shortcutHelp.style.cssText = 'bottom: 20px; left: 20px; z-index: 1000; opacity: 0.7; font-size: 0.75rem;';
+    shortcutHelp.innerHTML = 'Shortcuts: Ctrl+S (Save) | Ctrl+Enter (Preview) | Esc (Close Modal)';
+    document.body.appendChild(shortcutHelp);
+    
+    // Hide shortcuts after 5 seconds
+    setTimeout(() => {
+        shortcutHelp.style.display = 'none';
+    }, 5000);
+    
+    console.log('{% if edit_mode %}Edit trainer{% else %}Add trainer{% endif %} form initialized successfully!');
+});
+
+// Success message handling
+{% if messages %}
+document.addEventListener('DOMContentLoaded', function() {
+    {% for message in messages %}
+    showToast('{{ message|escapejs }}', '{{ message.tags }}');
+    {% endfor %}
+});
+{% endif %}
+
+// Confirm before leaving page with unsaved changes
+window.addEventListener('beforeunload', function(e) {
+    {% if edit_mode %}
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+    }
+    {% endif %}
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + S to save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        document.querySelector('form').submit();
+    }
+    
+    // Ctrl/Cmd + Enter to preview
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        previewTrainer();
+    }
+    
+    // Escape to close modals
+    if (e.key === 'Escape') {
+        const modal = document.querySelector('.modal.show');
+        if (modal) {
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+        }
+    }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    // Clean up any intervals or timeouts
+    if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+    }
 });
 </script>
+
 {% endblock %}

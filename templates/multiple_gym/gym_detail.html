@@ -164,7 +164,7 @@
                     <h5 class="text-muted">No members yet</h5>
                     <p class="text-muted">Add the first member to this gym</p>
                     {% if user.user_type == 'gymadmin' %}
-                    <a href="{% url 'add_member' gym.id %}" class="btn btn-primary">
+                    <a href="{% url 'multiple_gym:add_member' gym.id %}" class="btn btn-primary">
                         <i class="fas fa-user-plus me-2"></i>Add First Member
                     </a>
                     {% endif %}

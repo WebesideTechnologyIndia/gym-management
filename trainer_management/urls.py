@@ -1,4 +1,4 @@
-# trainer_management/urls.py - Clean and organized
+# trainer_management/urls.py - Updated with edit trainer
 
 from django.urls import path
 from . import views
@@ -10,6 +10,10 @@ urlpatterns = [
     path('gym/<int:gym_id>/trainers/', views.trainer_list, name='trainer_list'),
     path('gym/<int:gym_id>/trainers/add/', views.add_trainer, name='add_trainer'),
     path('gym/<int:gym_id>/trainers/<int:trainer_id>/', views.trainer_detail, name='trainer_detail'),
+    
+    # NEW: Edit trainer URL - ADD THIS LINE
+    path('gym/<int:gym_id>/trainers/<int:trainer_id>/edit/', views.edit_trainer, name='edit_trainer'),
+    
     path('gym/<int:gym_id>/trainers/<int:trainer_id>/assign-members/', views.assign_members_to_trainer, name='assign_members'),
     path('gym/<int:gym_id>/trainers/<int:trainer_id>/permissions/', views.trainer_permissions, name='trainer_permissions'),
     

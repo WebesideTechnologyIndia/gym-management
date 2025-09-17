@@ -1,0 +1,293 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Add Inventory Category - Gym Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-plus-circle me-2"></i>Add Inventory Category</h2>
+        <p class="text-muted mb-0">Create new inventory category for organization</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:inventory_category_list' gym_id=gym.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-list me-2"></i>View Categories
+        </a>
+        <a href="{% url 'inventory:dashboard' gym_id=gym.id %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-boxes me-2"></i>Category Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Basic Information</h6>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category Name *</label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g., Protein Supplements" required>
+                            <div class="form-text">Enter a descriptive name for the category</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Icon (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-icons"></i></span>
+                                <input type="text" name="icon" class="form-control" placeholder="fa-pills" id="iconInput">
+                            </div>
+                            <div class="form-text">Font Awesome icon class (e.g., fa-pills, fa-bottle-water)</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Brief description of this inventory category..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Icon Preview -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Icon Preview</h6>
+                            <div class="p-3 bg-light rounded text-center">
+                                <i id="iconPreview" class="fas fa-boxes fa-3x text-muted"></i>
+                                <div class="mt-2">
+                                    <small class="text-muted">Icon preview will appear here</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Common Icons for Inventory -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Common Icons</h6>
+                            <div class="row">
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-pills">
+                                        <i class="fas fa-pills me-2"></i>Supplements
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-bottle-water">
+                                        <i class="fas fa-bottle-water me-2"></i>Drinks
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-tshirt">
+                                        <i class="fas fa-tshirt me-2"></i>Apparel
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-apple-alt">
+                                        <i class="fas fa-apple-alt me-2"></i>Snacks
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-soap">
+                                        <i class="fas fa-soap me-2"></i>Towels
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-tools">
+                                        <i class="fas fa-tools me-2"></i>Accessories
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-first-aid">
+                                        <i class="fas fa-first-aid me-2"></i>First Aid
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-spray-can">
+                                        <i class="fas fa-spray-can me-2"></i>Cleaning
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-dumbbell">
+                                        <i class="fas fa-dumbbell me-2"></i>Small Equipment
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-battery-full">
+                                        <i class="fas fa-battery-full me-2"></i>Electronics
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-clipboard-list">
+                                        <i class="fas fa-clipboard-list me-2"></i>Stationery
+                                    </button>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-2">
+                                    <button type="button" class="btn btn-outline-success w-100 icon-btn" data-icon="fa-box">
+                                        <i class="fas fa-box me-2"></i>Miscellaneous
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'inventory:inventory_category_list' gym_id=gym.id %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Add Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Existing Categories -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Existing Categories
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if existing_categories %}
+                    {% for category in existing_categories %}
+                    <div class="d-flex align-items-center mb-2 p-2 bg-light rounded">
+                        {% if category.icon %}
+                        <i class="fas {{ category.icon }} text-success me-2"></i>
+                        {% else %}
+                        <i class="fas fa-boxes text-muted me-2"></i>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ category.name }}</div>
+                            <small class="text-muted">{{ category.items.count }} items</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'inventory:inventory_category_list' gym_id=gym.id %}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-eye me-2"></i>View All Categories
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-boxes fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No categories created yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-check text-success me-2"></i>Best Practices</h6>
+                    <small class="text-muted">
+                        • Use clear, descriptive names<br>
+                        • Group similar items together<br>
+                        • Choose relevant icons for easy identification<br>
+                        • Keep categories broad but meaningful
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-info text-info me-2"></i>Examples</h6>
+                    <small class="text-muted">
+                        • Protein Supplements<br>
+                        • Energy Drinks<br>
+                        • Gym Towels<br>
+                        • Workout Accessories<br>
+                        • Cleaning Supplies
+                    </small>
+                </div>
+                
+                <div class="mb-0">
+                    <h6><i class="fas fa-star text-warning me-2"></i>Popular Categories</h6>
+                    <small class="text-muted">
+                        • Supplements (35%)<br>
+                        • Beverages (25%)<br>
+                        • Apparel (20%)<br>
+                        • Accessories (15%)<br>
+                        • Others (5%)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this to your add_inventory_category.html template -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Force expand inventory menus
+    const inventorySubmenu = document.getElementById('inventorySubmenu');
+    const inventoryItemsSubmenu = document.getElementById('inventoryItemsSubmenu');
+    
+    if (inventorySubmenu) {
+        inventorySubmenu.classList.add('show');
+        const toggle = document.querySelector('a[href="#inventorySubmenu"]');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.classList.remove('collapsed');
+        }
+    }
+    
+    if (inventoryItemsSubmenu) {
+        inventoryItemsSubmenu.classList.add('show');
+        const toggle = document.querySelector('a[href="#inventoryItemsSubmenu"]');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.classList.remove('collapsed');
+        }
+    }
+});
+</script>
+<style>
+.icon-btn {
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.icon-btn.active {
+    background-color: var(--bs-success);
+    color: white;
+    border-color: var(--bs-success);
+}
+
+#iconPreview {
+    transition: all 0.3s ease;
+}
+
+.text-success {
+    color: #198754 !important;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    border-color: #198754;
+}
+</style>
+{% endblock %}

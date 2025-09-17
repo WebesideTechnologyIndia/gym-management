@@ -4,20 +4,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 
-class EquipmentCategory(models.Model):
-    """Categories for different types of equipment"""
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    icon = models.CharField(max_length=50, blank=True, help_text="Font Awesome icon class")
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        verbose_name_plural = "Equipment Categories"
-        ordering = ['name']
-    
-    def __str__(self):
-        return self.name
+from multiple_gym.models import Gym  # Correct import of Gym model
+
 
 class Vendor(models.Model):
     """Vendor/Supplier information"""
@@ -51,6 +41,27 @@ class Vendor(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class EquipmentCategory(models.Model):
+    """Equipment categories - moved before Equipment class"""
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    icon = models.ImageField(upload_to='category_icons/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # ADD THIS FIELD if you want to track who created the category
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name_plural = "Equipment Categories"
+        ordering = ['name']
+        unique_together = ['gym', 'name']  # Prevent duplicate category names per gym
+    
+    def __str__(self):
+        return f"{self.name} ({self.gym.name})"
+
 
 class Equipment(models.Model):
     """Main equipment model"""
@@ -195,6 +206,9 @@ class Equipment(models.Model):
 
         super().save(*args, **kwargs)
 
+
+# Rest of your models follow...
+
 class MaintenanceRecord(models.Model):
     """Equipment maintenance tracking"""
     MAINTENANCE_TYPE_CHOICES = [
@@ -292,6 +306,7 @@ class MaintenanceRecord(models.Model):
             print(f"❌ Error in MaintenanceRecord save: {str(e)}")
             raise e
 
+
 class InventoryCategory(models.Model):
     """Categories for inventory items"""
     name = models.CharField(max_length=100, unique=True)
@@ -305,6 +320,7 @@ class InventoryCategory(models.Model):
     
     def __str__(self):
         return self.name
+
 
 class InventoryItem(models.Model):
     """Inventory items like supplements, towels, etc."""
@@ -324,7 +340,7 @@ class InventoryItem(models.Model):
     brand = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     
-    # 🔥 FIXED: Changed from CharField to ForeignKey
+    # Fixed: Changed from CharField to ForeignKey
     gym = models.ForeignKey('multiple_gym.Gym', on_delete=models.CASCADE, related_name='inventory_items')
     
     # Stock Information
@@ -392,8 +408,10 @@ class InventoryItem(models.Model):
         """Calculate total stock value"""
         return self.current_stock * self.cost_price
 
+
+
 class StockTransaction(models.Model):
-    """Track all stock movements"""
+    """Track all stock movements - FIXED VERSION"""
     TRANSACTION_TYPE_CHOICES = [
         ('purchase', 'Purchase'),
         ('sale', 'Sale'),
@@ -436,20 +454,62 @@ class StockTransaction(models.Model):
         return f"{self.item.name} - {self.transaction_type} ({self.quantity})"
     
     def save(self, *args, **kwargs):
-        # Calculate total amount
-        self.total_amount = self.quantity * self.unit_price
-        
-        # Update item stock
-        if self.transaction_type in ['purchase', 'adjustment', 'return']:
-            self.stock_after = self.stock_before + self.quantity
-        else:  # sale, damage, transfer, expired
-            self.stock_after = self.stock_before - self.quantity
-        
-        # Update the inventory item's current stock
-        self.item.current_stock = self.stock_after
-        self.item.save()
-        
-        super().save(*args, **kwargs)
+        """Override save with proper Decimal handling"""
+        try:
+            # Convert all values to Decimal with proper validation
+            if self.quantity is not None:
+                quantity_decimal = Decimal(str(self.quantity))
+            else:
+                quantity_decimal = Decimal('0')
+
+            if self.unit_price is not None:
+                unit_price_decimal = Decimal(str(self.unit_price))
+            else:
+                unit_price_decimal = Decimal('0')
+
+            if self.stock_before is not None:
+                stock_before_decimal = Decimal(str(self.stock_before))
+            else:
+                stock_before_decimal = Decimal('0')
+
+            # Calculate total amount using Decimal arithmetic only
+            self.total_amount = quantity_decimal * unit_price_decimal
+
+            # Update stock levels based on transaction type
+            if self.transaction_type in ['purchase', 'adjustment', 'return']:
+                # Incoming stock
+                stock_after_decimal = stock_before_decimal + quantity_decimal
+            else:  # sale, damage, transfer, expired
+                # Outgoing stock
+                stock_after_decimal = stock_before_decimal - quantity_decimal
+
+                # Prevent negative stock
+                if stock_after_decimal < Decimal('0'):
+                    stock_after_decimal = Decimal('0')
+
+            # Ensure stock_after is set as Decimal
+            self.stock_after = stock_after_decimal
+
+            # Call parent save first to create the transaction record
+            super().save(*args, **kwargs)
+
+            # Then update the inventory item's current stock
+            # Refresh the item from database to avoid stale data
+            self.item.refresh_from_db()
+            self.item.current_stock = stock_after_decimal
+            self.item.save(update_fields=['current_stock'])
+
+        except Exception as e:
+            print(f"❌ Error in StockTransaction.save(): {str(e)}")
+            print(f"❌ Debug - quantity: {self.quantity} ({type(self.quantity)})")
+            print(f"❌ Debug - unit_price: {self.unit_price} ({type(self.unit_price)})")
+            print(f"❌ Debug - stock_before: {self.stock_before} ({type(self.stock_before)})")
+            raise e
+
+
+
+
+
 
 class StockAlert(models.Model):
     """System alerts for inventory management"""

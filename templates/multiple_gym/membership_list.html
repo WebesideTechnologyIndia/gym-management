@@ -2,9 +2,6 @@
 
 {% block title %}{{ title }}{% endblock %}
 
-
-
-
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -48,7 +45,11 @@
                         {% endif %}
                     </td>   
                     <td>
-                        <a href="{% url 'multiple_gym:payment_history' membership.pk %}" class="btn btn-sm btn-info">View</a>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'multiple_gym:payment_history' membership.pk %}" class="btn btn-sm btn-info">View</a>
+                            <a href="{% url 'multiple_gym:edit_membership' membership.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ membership.pk }}">Delete</button>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -59,5 +60,27 @@
             </tbody>
         </table>
     </div>
+    
+    <!-- Delete Confirmation Modals -->
+    {% for membership in memberships %}
+    <div class="modal fade" id="deleteModal{{ membership.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ membership.pk }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel{{ membership.pk }}">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the membership for <strong>{{ membership.member_name }}</strong>?</p>
+                    <p class="text-muted">This action cannot be undone. All payment history will also be deleted.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a href="{% url 'multiple_gym:delete_membership' membership.pk %}" class="btn btn-danger">Yes, Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}

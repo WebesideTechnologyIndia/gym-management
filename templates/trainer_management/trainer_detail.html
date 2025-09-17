@@ -405,10 +405,14 @@
 {% endblock %}
 
 {% block extra_js %}
+
+
 <script>
+    // Updated JavaScript for trainer_detail.html
+
 function editTrainer() {
-    // Redirect to edit trainer page
-    window.location.href = "{% url 'trainer_management:trainer_list' gym_id %}#edit-{{ trainer.id }}";
+    // Redirect to edit trainer page using the correct URL pattern
+    window.location.href = "{% url 'trainer_management:edit_trainer' gym_id trainer.id %}";
 }
 
 function viewSchedule() {

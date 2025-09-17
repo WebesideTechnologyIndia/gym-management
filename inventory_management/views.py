@@ -8,7 +8,13 @@ from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from datetime import date, timedelta
 from decimal import Decimal
-
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from multiple_gym.models import Gym
+from .models import EquipmentCategory, Equipment
 # Import your models and forms
 from .models import (
     Equipment,
@@ -248,15 +254,21 @@ from .forms import EquipmentForm
 # from your_main_app.models import Gym, GymAdmin  # Adjust import as needed
 
 
-
 @login_required
-def add_equipment(request, gym_id):
-    """Add new equipment using Django form"""
+def add_equipment(request, gym_id, equipment_id=None):
+    """Add new equipment or edit existing equipment using Django form"""
     if request.user.user_type not in ["superadmin", "gymadmin"]:
         messages.error(request, "Access denied!")
         return redirect("login")
 
     gym = get_object_or_404(Gym, id=gym_id)
+    
+    # Check if editing existing equipment
+    equipment = None
+    is_edit_mode = False
+    if equipment_id:
+        equipment = get_object_or_404(Equipment, id=equipment_id, gym=gym)
+        is_edit_mode = True
 
     # Check access permissions for gymadmin
     if request.user.user_type == "gymadmin":
@@ -270,38 +282,41 @@ def add_equipment(request, gym_id):
             return redirect("login")
 
     if request.method == "POST":
-        form = EquipmentForm(request.POST, request.FILES)
+        form = EquipmentForm(request.POST, request.FILES, instance=equipment)
         if form.is_valid():
             try:
-                # Check if serial number already exists for this gym
+                # Check if serial number already exists for this gym (only for new equipment or if serial number changed)
                 serial_number = form.cleaned_data["serial_number"]
-                if Equipment.objects.filter(
+                existing_equipment = Equipment.objects.filter(
                     gym=gym, serial_number=serial_number
-                ).exists():
+                ).exclude(id=equipment.id if equipment else None)
+                
+                if existing_equipment.exists():
                     form.add_error(
                         "serial_number",
                         f"Equipment with serial number {serial_number} already exists in this gym!",
                     )
                 else:
                     # Save the equipment
-                    equipment = form.save(commit=False)
-                    equipment.gym = gym  # Set the gym
-                    equipment.created_by = request.user
+                    equipment_obj = form.save(commit=False)
+                    equipment_obj.gym = gym  # Set the gym
+                    if not is_edit_mode:
+                        equipment_obj.created_by = request.user
 
                     # Ensure warranty_end_date is calculated before saving
                     if (
-                        equipment.warranty_start_date
-                        and equipment.warranty_period_months
+                        equipment_obj.warranty_start_date
+                        and equipment_obj.warranty_period_months
                     ):
                         import calendar
                         from datetime import datetime
 
-                        year = equipment.warranty_start_date.year
+                        year = equipment_obj.warranty_start_date.year
                         month = (
-                            equipment.warranty_start_date.month
-                            + equipment.warranty_period_months
+                            equipment_obj.warranty_start_date.month
+                            + equipment_obj.warranty_period_months
                         )
-                        day = equipment.warranty_start_date.day
+                        day = equipment_obj.warranty_start_date.day
 
                         # Handle year overflow
                         while month > 12:
@@ -313,23 +328,28 @@ def add_equipment(request, gym_id):
                         if day > max_day:
                             day = max_day
 
-                        equipment.warranty_end_date = datetime(year, month, day).date()
+                        equipment_obj.warranty_end_date = datetime(year, month, day).date()
 
-                    equipment.save()
+                    equipment_obj.save()
 
-                    messages.success(
-                        request, f'Equipment "{equipment.name}" added successfully!'
-                    )
+                    if is_edit_mode:
+                        messages.success(
+                            request, f'Equipment "{equipment_obj.name}" updated successfully!'
+                        )
+                    else:
+                        messages.success(
+                            request, f'Equipment "{equipment_obj.name}" added successfully!'
+                        )
                     return redirect("inventory:equipment_list", gym_id=gym_id)
             except Exception as e:
-                messages.error(request, f"Error adding equipment: {str(e)}")
+                messages.error(request, f"Error {'updating' if is_edit_mode else 'adding'} equipment: {str(e)}")
         else:
             # Form validation errors - they will be displayed in the template
             messages.error(request, "Please correct the errors below.")
     else:
-        form = EquipmentForm()
+        form = EquipmentForm(instance=equipment)
 
-    # Get categories and vendors for template context (if needed)
+    # Get categories and vendors for template context
     categories = EquipmentCategory.objects.all().order_by("name")
     vendors = Vendor.objects.filter(is_active=True).order_by("name")
 
@@ -337,12 +357,47 @@ def add_equipment(request, gym_id):
         "form": form,
         "gym": gym,
         "gym_id": gym_id,
-        "categories": categories,  # Add if your template needs it
-        "vendors": vendors,  # Add if your template needs it
+        "equipment": equipment,
+        "is_edit_mode": is_edit_mode,
+        "categories": categories,
+        "vendors": vendors,
     }
 
     return render(request, "inventory_management/add_equipment.html", context)
 
+
+
+
+@login_required
+def delete_equipment(request, gym_id, equipment_id):
+    """Delete equipment with confirmation"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    gym = get_object_or_404(Gym, id=gym_id)
+    equipment = get_object_or_404(Equipment, id=equipment_id, gym=gym)
+
+    # Check access permissions for gymadmin
+    if request.user.user_type == "gymadmin":
+        try:
+            gym_admin = GymAdmin.objects.get(user=request.user)
+            if gym not in gym_admin.gyms.all():
+                messages.error(request, "You do not have access to this gym!")
+                return redirect("gymadmin_home")
+        except GymAdmin.DoesNotExist:
+            messages.error(request, "Access denied!")
+            return redirect("login")
+
+    if request.method == "POST":
+        try:
+            equipment_name = equipment.name
+            equipment.delete()
+            messages.success(request, f'Equipment "{equipment_name}" has been deleted successfully!')
+        except Exception as e:
+            messages.error(request, f"Error deleting equipment: {str(e)}")
+    
+    return redirect("inventory:equipment_list", gym_id=gym_id)
 
 # Maintenance Views
 @login_required
@@ -830,18 +885,7 @@ def inventory_detail(request, gym_id, item_id):
     return redirect("inventory:inventory_list", gym_id=gym_id)
 
 
-@login_required
-def add_inventory_item(request, gym_id):
-    """Placeholder for add inventory item"""
-    messages.info(request, "Add inventory item feature coming soon!")
-    return redirect("inventory:inventory_list", gym_id=gym_id)
 
-
-@login_required
-def stock_transaction(request, gym_id, item_id):
-    """Placeholder for stock transaction"""
-    messages.info(request, "Stock transaction feature coming soon!")
-    return redirect("inventory:inventory_list", gym_id=gym_id)
 
 
 @login_required
@@ -946,7 +990,7 @@ def equipment_list(request, gym_id):
             gym_admin = GymAdmin.objects.get(user=request.user)
             if gym not in gym_admin.gyms.all():
                 messages.error(request, "You do not have access to this gym!")
-                return redirect("gymadmin_home")
+                return redirect("multiple_gym:gymadmin_home")
         except GymAdmin.DoesNotExist:
             messages.error(request, "Access denied!")
             return redirect("login")
@@ -1027,92 +1071,6 @@ def equipment_detail(request, gym_id, equipment_id):
 
     return render(request, "inventory_management/equipment_detail.html", context)
 
-
-@login_required
-def add_equipment(request, gym_id):
-    """Add new equipment with detailed error handling"""
-    if request.user.user_type not in ["superadmin", "gymadmin"]:
-        messages.error(request, "Access denied!")
-        return redirect("login")
-
-    gym = get_object_or_404(Gym, id=gym_id)
-
-    if request.method == "POST":
-        print("POST Request received")  # Debug
-        print(f"POST data: {request.POST}")  # Debug
-
-        form = EquipmentForm(request.POST, request.FILES)
-
-        print(f"Form is_valid: {form.is_valid()}")  # Debug
-
-        if form.is_valid():
-            print("Form is valid, trying to save...")  # Debug
-            try:
-                # Check serial number
-                serial_number = form.cleaned_data["serial_number"]
-                print(f"Serial number: {serial_number}")  # Debug
-
-                if Equipment.objects.filter(
-                    gym=gym, serial_number=serial_number
-                ).exists():
-                    form.add_error(
-                        "serial_number",
-                        f"Equipment with serial number {serial_number} already exists!",
-                    )
-                    print("Serial number already exists")  # Debug
-                else:
-                    # Print all cleaned data for debugging
-                    print("Cleaned data:")
-                    for key, value in form.cleaned_data.items():
-                        print(f"  {key}: {value} (type: {type(value)})")
-
-                    # Simple save
-                    equipment = form.save(commit=False)
-                    equipment.gym = gym
-                    equipment.created_by = request.user
-
-                    print(f"About to save equipment: {equipment}")  # Debug
-                    equipment.save()
-
-                    messages.success(
-                        request, f'Equipment "{equipment.name}" added successfully!'
-                    )
-                    return redirect("inventory:equipment_list", gym_id=gym_id)
-
-            except Exception as e:
-                print(f"Exception occurred: {e}")  # Debug
-                import traceback
-
-                traceback.print_exc()  # Full stack trace
-                messages.error(request, f"Error: {str(e)}")
-        else:
-            print("Form is NOT valid")  # Debug
-            print(f"Form errors: {form.errors}")  # Debug
-            print(f"Form non-field errors: {form.non_field_errors}")  # Debug
-
-            # Add form errors to messages
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
-
-            messages.error(request, "Please correct the errors above.")
-    else:
-        print("GET Request - showing blank form")  # Debug
-        form = EquipmentForm()
-
-    # Context for template
-    categories = EquipmentCategory.objects.all().order_by("name")
-    vendors = Vendor.objects.filter(is_active=True).order_by("name")
-
-    context = {
-        "form": form,
-        "gym": gym,
-        "gym_id": gym_id,
-        "categories": categories,
-        "vendors": vendors,
-    }
-
-    return render(request, "inventory_management/add_equipment.html", context)
 
 
 # Maintenance Views
@@ -1195,7 +1153,7 @@ def update_maintenance(request, gym_id, maintenance_id):
             gym_admin = GymAdmin.objects.get(user=request.user)
             if gym not in gym_admin.gyms.all():
                 messages.error(request, "You do not have access to this gym!")
-                return redirect("gymadmin_home")
+                return redirect("multiple_gym:gymadmin_home")
         except GymAdmin.DoesNotExist:
             messages.error(request, "Access denied!")
             return redirect("login")
@@ -1396,6 +1354,7 @@ def inventory_detail(request, gym_id, item_id):
     return render(request, "inventory_management/inventory_detail.html", context)
 
 
+
 @login_required
 def add_inventory_item(request, gym_id):
     """Add new inventory item"""
@@ -1403,47 +1362,74 @@ def add_inventory_item(request, gym_id):
         messages.error(request, "Access denied!")
         return redirect("login")
 
+    gym = get_object_or_404(Gym, id=gym_id)
+
     if request.method == "POST":
         try:
+            # Get form data
+            name = request.POST.get("name", "").strip()
+            
+            # Validate required fields
+            if not name:
+                messages.error(request, "Item name is required!")
+                return redirect("inventory:add_inventory_item", gym_id=gym_id)
+            
+            # Check if item already exists for this gym
+            if InventoryItem.objects.filter(gym=gym, name__iexact=name).exists():
+                messages.error(request, f'Inventory item "{name}" already exists in this gym!')
+                return redirect("inventory:add_inventory_item", gym_id=gym_id)
+
+            # Convert string values to proper types
+            current_stock = float(request.POST.get("current_stock", 0))
+            minimum_stock = float(request.POST.get("minimum_stock", 0))
+            maximum_stock = float(request.POST.get("maximum_stock", 0))
+            cost_price = float(request.POST.get("cost_price", 0))
+            selling_price = float(request.POST.get("selling_price", 0))
+            reorder_quantity = float(request.POST.get("reorder_quantity", 0))
+            expiry_alert_days = int(request.POST.get("expiry_alert_days", 30))
+
             item = InventoryItem.objects.create(
-                name=request.POST.get("name"),
+                name=name,
                 category_id=request.POST.get("category"),
                 brand=request.POST.get("brand", ""),
                 description=request.POST.get("description", ""),
-                gym=str(gym_id),
-                current_stock=request.POST.get("current_stock", 0),
-                minimum_stock=request.POST.get("minimum_stock", 0),
-                maximum_stock=request.POST.get("maximum_stock", 0),
+                gym=gym,
+                current_stock=current_stock,
+                minimum_stock=minimum_stock,
+                maximum_stock=maximum_stock,
                 unit=request.POST.get("unit"),
-                cost_price=request.POST.get("cost_price", 0),
-                selling_price=request.POST.get("selling_price", 0),
+                cost_price=cost_price,
+                selling_price=selling_price,
                 auto_reorder=request.POST.get("auto_reorder") == "on",
-                reorder_quantity=request.POST.get("reorder_quantity", 0),
+                reorder_quantity=reorder_quantity,
                 primary_vendor_id=(
                     request.POST.get("vendor") if request.POST.get("vendor") else None
                 ),
                 sku=request.POST.get("sku", ""),
                 location=request.POST.get("location", ""),
                 has_expiry=request.POST.get("has_expiry") == "on",
-                expiry_alert_days=request.POST.get("expiry_alert_days", 30),
+                expiry_alert_days=expiry_alert_days,
                 created_by=request.user,
             )
 
             # Create initial stock transaction if stock > 0
-            if item.current_stock > 0:
+            if current_stock > 0:
                 StockTransaction.objects.create(
                     item=item,
                     transaction_type="adjustment",
-                    quantity=item.current_stock,
-                    unit_price=item.cost_price,
+                    quantity=current_stock,
+                    unit_price=cost_price,
                     stock_before=0,
-                    stock_after=item.current_stock,
+                    stock_after=current_stock,
                     notes="Initial stock entry",
                     created_by=request.user,
                 )
 
-            messages.success(request, "Inventory item added successfully!")
-            return redirect("inventory_list", gym_id=gym_id)
+            messages.success(request, f'Inventory item "{item.name}" added successfully!')
+            return redirect("inventory:inventory_list", gym_id=gym_id)
+            
+        except ValueError as e:
+            messages.error(request, f"Invalid number format: {str(e)}")
         except Exception as e:
             messages.error(request, f"Error adding inventory item: {str(e)}")
 
@@ -1453,74 +1439,118 @@ def add_inventory_item(request, gym_id):
     context = {
         "categories": categories,
         "vendors": vendors,
+        "gym": gym,
         "gym_id": gym_id,
     }
 
     return render(request, "inventory_management/add_inventory_item.html", context)
 
 
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db import transaction
+from decimal import Decimal, InvalidOperation
+
 @login_required
 def stock_transaction(request, gym_id, item_id):
-    """Add stock transaction (purchase, sale, adjustment, etc.)"""
-    item = get_object_or_404(InventoryItem, id=item_id, gym=str(gym_id))
+    """Add stock transaction (purchase, sale, adjustment, etc.) - FIXED VERSION"""
+    gym = get_object_or_404(Gym, id=gym_id)
+    item = get_object_or_404(InventoryItem, id=item_id, gym=gym)
 
     if request.method == "POST":
         try:
             with transaction.atomic():
+                print(f"🔍 Transaction created for: {item.name}")
+                
                 transaction_type = request.POST.get("transaction_type")
-                quantity = Decimal(str(request.POST.get("quantity", 0)))
-                unit_price = Decimal(str(request.POST.get("unit_price", 0)))
+                
+                # Convert inputs to Decimal with proper error handling
+                try:
+                    quantity_str = request.POST.get("quantity", "0").strip()
+                    unit_price_str = request.POST.get("unit_price", "0").strip()
+                    
+                    # Remove any commas or spaces from input
+                    quantity_str = quantity_str.replace(',', '').replace(' ', '')
+                    unit_price_str = unit_price_str.replace(',', '').replace(' ', '')
+                    
+                    quantity = Decimal(quantity_str)
+                    unit_price = Decimal(unit_price_str)
+                    
+                    print(f"🔍 Parsed values - quantity: {quantity} ({type(quantity)}), unit_price: {unit_price} ({type(unit_price)})")
+                    
+                except (ValueError, TypeError, InvalidOperation) as e:
+                    print(f"❌ Invalid input format: {e}")
+                    messages.error(request, "Invalid quantity or price format! Please enter valid numbers.")
+                    return render(request, "inventory_management/stock_transaction.html", {
+                        "item": item, "gym": gym, "gym_id": gym_id,
+                        "vendors": Vendor.objects.filter(is_active=True)
+                    })
 
                 # Validate quantity for outgoing transactions
                 if transaction_type in ["sale", "damage", "transfer", "expired"]:
                     if quantity > item.current_stock:
-                        messages.error(request, "Insufficient stock!")
-                        return redirect(
-                            "inventory_detail", gym_id=gym_id, item_id=item_id
-                        )
+                        messages.error(request, f"Insufficient stock! Available: {item.current_stock} {item.unit}")
+                        return render(request, "inventory_management/stock_transaction.html", {
+                            "item": item, "gym": gym, "gym_id": gym_id,
+                            "vendors": Vendor.objects.filter(is_active=True)
+                        })
 
-                stock_transaction = StockTransaction.objects.create(
+                # Get vendor ID safely
+                vendor_id = None
+                vendor_str = request.POST.get("vendor", "").strip()
+                if vendor_str and vendor_str.isdigit():
+                    vendor_id = int(vendor_str)
+
+                # Get expiry date safely
+                expiry_date = request.POST.get("expiry_date", "").strip()
+                if not expiry_date:
+                    expiry_date = None
+
+                # Create the stock transaction using direct assignment
+                print(f"🔍 Creating StockTransaction object")
+                stock_transaction = StockTransaction(
                     item=item,
                     transaction_type=transaction_type,
                     quantity=quantity,
                     unit_price=unit_price,
                     stock_before=item.current_stock,
-                    reference_number=request.POST.get("reference_number", ""),
-                    vendor_id=(
-                        request.POST.get("vendor")
-                        if request.POST.get("vendor")
-                        else None
-                    ),
-                    expiry_date=(
-                        request.POST.get("expiry_date")
-                        if request.POST.get("expiry_date")
-                        else None
-                    ),
-                    batch_number=request.POST.get("batch_number", ""),
-                    notes=request.POST.get("notes", ""),
+                    reference_number=request.POST.get("reference_number", "").strip(),
+                    vendor_id=vendor_id,
+                    expiry_date=expiry_date,
+                    batch_number=request.POST.get("batch_number", "").strip(),
+                    notes=request.POST.get("notes", "").strip(),
                     created_by=request.user,
                 )
+                
+                print(f"🔍 Saving StockTransaction")
+                stock_transaction.save()
+                
+                print(f"✅ Transaction saved successfully")
 
                 messages.success(
-                    request, f"Stock {transaction_type} recorded successfully!"
+                    request, 
+                    f"Stock {transaction_type} recorded successfully! "
+                    f"New stock level: {item.current_stock} {item.unit}"
                 )
-                return redirect("inventory_detail", gym_id=gym_id, item_id=item_id)
+                return redirect("inventory:inventory_detail", gym_id=gym_id, item_id=item_id)
+                
         except Exception as e:
             messages.error(request, f"Error recording transaction: {str(e)}")
+            print(f"❌ Transaction error: {str(e)}")
+            print(f"❌ Full error traceback:")
+            import traceback
+            traceback.print_exc()
 
     vendors = Vendor.objects.filter(is_active=True)
-
     context = {
         "item": item,
         "vendors": vendors,
+        "gym": gym,
         "gym_id": gym_id,
     }
 
     return render(request, "inventory_management/stock_transaction.html", context)
-
-
-# Vendor Views
-
 
 # Reports and Analytics Views
 @login_required
@@ -1931,88 +1961,112 @@ def get_inventory_item_data(request, item_id):
 # inventory_management/views.py में add करें:
 
 @login_required
-def add_equipment_category(request, gym_id):  # Add gym_id parameter here
+def equipment_category_list(request, gym_id):
+    """List equipment categories"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    gym = get_object_or_404(Gym, id=gym_id)
+    
+    # Check access permissions for gymadmin
+    if request.user.user_type == "gymadmin":
+        try:
+            gym_admin = GymAdmin.objects.get(user=request.user)
+            if gym not in gym_admin.gyms.all():
+                messages.error(request, "You do not have access to this gym!")
+                return redirect("gymadmin_home")
+        except GymAdmin.DoesNotExist:
+            messages.error(request, "Access denied!")
+            return redirect("login")
+
+    try:
+        categories = EquipmentCategory.objects.all().order_by('name')
+        
+        context = {
+            'categories': categories,
+            'gym': gym,
+            'gym_id': gym_id,  # THIS IS IMPORTANT!
+        }
+        
+        return render(request, 'inventory_management/equipment_category_list.html', context)
+        
+    except Exception as e:
+        print(f"❌ Error in equipment_category_list: {str(e)}")
+        messages.error(request, "Error loading categories. Please try again.")
+        return redirect('inventory:dashboard', gym_id=gym_id)
+
+
+
+
+@login_required  
+def add_equipment_category(request, gym_id):
     """Add new equipment category"""
     if request.user.user_type not in ["superadmin", "gymadmin"]:
         messages.error(request, "Access denied!")
         return redirect("login")
+
+    # Get the gym object
+    gym = get_object_or_404(Gym, id=gym_id)
 
     if request.method == "POST":
         try:
             # Get form data
             name = request.POST.get("name", "").strip()
             description = request.POST.get("description", "").strip()
-            icon = request.POST.get("icon", "").strip()
+            icon = request.FILES.get("icon")  # Handle file upload
 
             # Validation
             if not name:
                 messages.error(request, "Category name is required!")
                 context = {
+                    "gym": gym,
                     "gym_id": gym_id,
-                    "existing_categories": EquipmentCategory.objects.all().order_by("name")
+                    "existing_categories": EquipmentCategory.objects.filter(gym=gym).order_by("name")
                 }
-                return render(
-                    request, "inventory_management/add_equipment_category.html", context
-                )
+                return render(request, "inventory_management/add_equipment_category.html", context)
 
-            # Check if category already exists
-            if EquipmentCategory.objects.filter(name__iexact=name).exists():
-                messages.error(request, f'Category "{name}" already exists!')
+            # Check if category already exists for this gym
+            if EquipmentCategory.objects.filter(gym=gym, name__iexact=name).exists():
+                messages.error(request, f'Category "{name}" already exists in this gym!')
                 context = {
+                    "gym": gym,
                     "gym_id": gym_id,
-                    "existing_categories": EquipmentCategory.objects.all().order_by("name")
+                    "existing_categories": EquipmentCategory.objects.filter(gym=gym).order_by("name")
                 }
-                return render(
-                    request, "inventory_management/add_equipment_category.html", context
-                )
+                return render(request, "inventory_management/add_equipment_category.html", context)
 
-            # Create category
+            # Create category - REMOVED created_by parameter
             category = EquipmentCategory.objects.create(
-                name=name, description=description, icon=icon
+                gym=gym,
+                name=name, 
+                description=description,
+                icon=icon
+                # Removed: created_by=request.user  # This field doesn't exist in your model
             )
 
-            messages.success(
-                request, f'Equipment category "{category.name}" added successfully!'
-            )
-            return redirect("inventory:equipment_category_list")
+            messages.success(request, f'Equipment category "{category.name}" added successfully!')
+            return redirect("inventory:equipment_category_list", gym_id=gym_id)
 
         except Exception as e:
             print(f"Error adding category: {str(e)}")
             messages.error(request, f"Error adding category: {str(e)}")
 
     # Get existing categories for reference
-    existing_categories = EquipmentCategory.objects.all().order_by("name")
+    existing_categories = EquipmentCategory.objects.filter(gym=gym).order_by("name")
 
     context = {
-        "gym_id": gym_id,  # Now gym_id is available from URL parameter
+        "gym": gym,
+        "gym_id": gym_id,
         "existing_categories": existing_categories,
     }
 
     return render(request, "inventory_management/add_equipment_category.html", context)
 
 
-@login_required
-def equipment_category_list(request):
-    """List all equipment categories"""
-    if request.user.user_type not in ["superadmin", "gymadmin"]:
-        messages.error(request, "Access denied!")
-        return redirect("login")
-    
-    # Get gym_id - you can get it from user or use default
-    gym_id = 1  # Default gym or get from request.user.gym.id
-    
-    categories = EquipmentCategory.objects.all().order_by('name')
-    
-    context = {
-        'categories': categories,
-        'gym_id': gym_id,  # Add this line
-    }
-    
-    return render(request, 'inventory_management/equipment_category_list.html', context)
-
 
 @login_required
-def edit_equipment_category(request, category_id):
+def edit_equipment_category(request, gym_id, category_id):  # Added gym_id parameter
     """Edit equipment category"""
     if request.user.user_type not in ["superadmin", "gymadmin"]:
         messages.error(request, "Access denied!")
@@ -2031,7 +2085,7 @@ def edit_equipment_category(request, category_id):
                 return render(
                     request,
                     "inventory_management/edit_equipment_category.html",
-                    {"category": category},
+                    {"category": category, "gym_id": gym_id},  # Added gym_id
                 )
 
             # Check if name exists (excluding current category)
@@ -2044,7 +2098,7 @@ def edit_equipment_category(request, category_id):
                 return render(
                     request,
                     "inventory_management/edit_equipment_category.html",
-                    {"category": category},
+                    {"category": category, "gym_id": gym_id},  # Added gym_id
                 )
 
             # Update category
@@ -2056,20 +2110,21 @@ def edit_equipment_category(request, category_id):
             messages.success(
                 request, f'Category "{category.name}" updated successfully!'
             )
-            return redirect("inventory:equipment_category_list")
+            return redirect("inventory:equipment_category_list", gym_id)  # Added gym_id
 
         except Exception as e:
             messages.error(request, f"Error updating category: {str(e)}")
 
     context = {
         "category": category,
+        "gym_id": gym_id,  # Added gym_id
     }
 
     return render(request, "inventory_management/edit_equipment_category.html", context)
 
 
 @login_required
-def delete_equipment_category(request, category_id):
+def delete_equipment_category(request, gym_id, category_id):  # Added gym_id parameter
     """Delete equipment category"""
     if request.user.user_type not in ["superadmin", "gymadmin"]:
         messages.error(request, "Access denied!")
@@ -2084,17 +2139,217 @@ def delete_equipment_category(request, category_id):
             request,
             f'Cannot delete category "{category.name}". It has {equipment_count} equipment assigned to it!',
         )
-        return redirect("inventory:equipment_category_list")
+        return redirect("inventory:equipment_category_list", gym_id)  # Added gym_id
 
     if request.method == "POST":
         category_name = category.name
         category.delete()
         messages.success(request, f'Category "{category_name}" deleted successfully!')
-        return redirect("inventory:equipment_category_list")
+        return redirect("inventory:equipment_category_list", gym_id)  # Added gym_id
 
     context = {
         "category": category,
         "equipment_count": equipment_count,
+        "gym_id": gym_id,  # Added gym_id
     }
 
     return render(request, "inventory_management/confirm_delete_category.html", context)
+
+
+
+
+# inventory_management/views.py mein add kariye
+
+# Complete inventory category views - Add these to your views.py
+
+@login_required
+def add_inventory_category(request, gym_id):
+    """Add new inventory category"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    gym = get_object_or_404(Gym, id=gym_id)
+
+    if request.method == "POST":
+        try:
+            name = request.POST.get("name", "").strip()
+            description = request.POST.get("description", "").strip()
+            icon = request.POST.get("icon", "").strip()
+
+            if not name:
+                messages.error(request, "Category name is required!")
+                context = {
+                    "gym": gym,
+                    "gym_id": gym_id,  # ✅ ADD THIS
+                    "existing_categories": InventoryCategory.objects.all().order_by("name")
+                }
+                return render(request, "inventory_management/add_inventory_category.html", context)
+
+            # Check if category already exists
+            if InventoryCategory.objects.filter(name__iexact=name).exists():
+                messages.error(request, f'Category "{name}" already exists!')
+                context = {
+                    "gym": gym,
+                    "gym_id": gym_id,  # ✅ ADD THIS
+                    "existing_categories": InventoryCategory.objects.all().order_by("name")
+                }
+                return render(request, "inventory_management/add_inventory_category.html", context)
+
+            # Create category
+            category = InventoryCategory.objects.create(
+                name=name,
+                description=description,
+                icon=icon
+            )
+
+            messages.success(request, f'Inventory category "{category.name}" added successfully!')
+            return redirect("inventory:inventory_category_list", gym_id=gym_id)
+
+        except Exception as e:
+            print(f"Error adding category: {str(e)}")
+            messages.error(request, f"Error adding category: {str(e)}")
+
+    existing_categories = InventoryCategory.objects.all().order_by("name")
+
+    context = {
+        "gym": gym,
+        "gym_id": gym_id,  # ✅ ADD THIS - Main fix!
+        "existing_categories": existing_categories,
+    }
+
+    return render(request, "inventory_management/add_inventory_category.html", context)
+
+@login_required
+def inventory_category_list(request, gym_id):
+    """List all inventory categories"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    try:
+        # Get the gym object to ensure it exists
+        gym = get_object_or_404(Gym, id=gym_id)
+        
+        # Check access permissions for gymadmin
+        if request.user.user_type == "gymadmin":
+            try:
+                gym_admin = GymAdmin.objects.get(user=request.user)
+                if gym not in gym_admin.gyms.all():
+                    messages.error(request, "You do not have access to this gym!")
+                    return redirect("multiple_gym:gymadmin_home")
+            except GymAdmin.DoesNotExist:
+                messages.error(request, "Access denied!")
+                return redirect("login")
+        
+        # Get all inventory categories (global, not gym-specific)
+        categories = InventoryCategory.objects.all().order_by('name')
+        
+        # Search functionality
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            categories = categories.filter(
+                Q(name__icontains=search_query) | 
+                Q(description__icontains=search_query)
+            )
+        
+        # Pagination
+        from django.core.paginator import Paginator
+        paginator = Paginator(categories, 12)  # Show 12 categories per page
+        page_number = request.GET.get('page')
+        categories = paginator.get_page(page_number)
+        
+        context = {
+            'categories': categories,
+            'gym': gym,
+            'gym_id': gym_id,
+            'search_query': search_query,
+            'total_categories': InventoryCategory.objects.all().count(),
+        }
+        
+        return render(request, 'inventory_management/inventory_category_list.html', context)
+        
+    except Exception as e:
+        print(f"❌ Error in inventory_category_list: {str(e)}")
+        messages.error(request, f"Error loading categories: {str(e)}")
+        return redirect('inventory:dashboard', gym_id=gym_id)
+
+
+@login_required
+def edit_inventory_category(request, gym_id, category_id):  # Added gym_id parameter
+    """Edit inventory category"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    category = get_object_or_404(InventoryCategory, id=category_id)
+
+    if request.method == "POST":
+        try:
+            name = request.POST.get("name", "").strip()
+            description = request.POST.get("description", "").strip()
+            icon = request.POST.get("icon", "").strip()
+
+            if not name:
+                messages.error(request, "Category name is required!")
+                context = {"category": category, "gym_id": gym_id}  # Added gym_id
+                return render(request, "inventory_management/edit_inventory_category.html", context)
+
+            # Check if name exists (excluding current category)
+            if (
+                InventoryCategory.objects.filter(name__iexact=name)
+                .exclude(id=category.id)
+                .exists()
+            ):
+                messages.error(request, f'Category "{name}" already exists!')
+                context = {"category": category, "gym_id": gym_id}  # Added gym_id
+                return render(request, "inventory_management/edit_inventory_category.html", context)
+
+            # Update category
+            category.name = name
+            category.description = description
+            category.icon = icon
+            category.save()
+
+            messages.success(request, f'Category "{category.name}" updated successfully!')
+            return redirect("inventory:inventory_category_list", gym_id=gym_id)  # Fixed
+
+        except Exception as e:
+            messages.error(request, f"Error updating category: {str(e)}")
+
+    context = {"category": category, "gym_id": gym_id}  # Added gym_id
+    return render(request, "inventory_management/edit_inventory_category.html", context)
+
+
+@login_required
+def delete_inventory_category(request, gym_id, category_id):  # Added gym_id parameter
+    # Your delete logic here - add gym_id to function signature and context
+    pass
+    """Delete inventory category"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    category = get_object_or_404(InventoryCategory, id=category_id)
+
+    # Check if category has items
+    items_count = category.items.count()
+    if items_count > 0:
+        messages.error(
+            request,
+            f'Cannot delete category "{category.name}". It has {items_count} items assigned to it!',
+        )
+        return redirect("inventory:inventory_category_list", gym_id=1)  # You might want to pass proper gym_id
+
+    if request.method == "POST":
+        category_name = category.name
+        category.delete()
+        messages.success(request, f'Category "{category_name}" deleted successfully!')
+        return redirect("inventory:inventory_category_list", gym_id=1)  # You might want to pass proper gym_id
+
+    context = {
+        "category": category,
+        "items_count": items_count,
+    }
+
+    return render(request, "inventory_management/confirm_delete_inventory_category.html", context)

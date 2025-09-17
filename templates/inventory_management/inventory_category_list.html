@@ -1,0 +1,187 @@
+{% extends 'multiple_gym/base.html' %}
+{% load static %}
+
+{% block title %}Inventory Categories - Gym Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-boxes me-2"></i>Inventory Categories</h2>
+        <p class="text-muted mb-0">Manage inventory categories for {{ gym.name }}</p>
+    </div>
+    <div>
+        <a href="{% url 'inventory:add_inventory_category' gym_id %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>Add Category
+        </a>
+        
+        <a href="{% url 'inventory:dashboard' gym_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row">
+            <div class="col-md-8">
+                <input type="text" 
+                       name="search" 
+                       class="form-control" 
+                       placeholder="Search categories..." 
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-outline-success me-2">
+                    <i class="fas fa-search me-1"></i>Search
+                </button>
+                {% if search_query %}
+                <a href="{% url 'inventory:inventory_category_list' gym_id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Categories List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Categories
+            <span class="badge bg-success ms-2">{{ total_categories }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if categories %}
+            <div class="row">
+                {% for category in categories %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 border-success">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-2">
+                                {% if category.icon %}
+                                    <i class="fas {{ category.icon }} text-success me-2" style="font-size: 2rem;"></i>
+                                {% else %}
+                                    <i class="fas fa-boxes text-muted me-2" style="font-size: 2rem;"></i>
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-0">{{ category.name }}</h6>
+                                    <small class="text-muted">
+                                        {{ category.items.count }} item(s)
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            {% if category.description %}
+                            <p class="text-muted small mb-2">{{ category.description|truncatewords:15 }}</p>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Created: {{ category.created_at|date:"M d, Y" }}
+                                </small>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'inventory:edit_inventory_category' gym_id category.id %}" 
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:delete_inventory_category' gym_id category.id %}" 
+                                       class="btn btn-sm btn-outline-danger"
+                                       onclick="return confirm('Are you sure you want to delete this category?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if categories.has_other_pages %}
+            <nav aria-label="Categories pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if categories.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ categories.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in categories.paginator.page_range %}
+                        {% if categories.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > categories.number|add:'-3' and num < categories.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if categories.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ categories.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-boxes text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">No Categories Found</h4>
+                {% if search_query %}
+                    <p class="text-muted">No categories match your search "{{ search_query }}"</p>
+                    <a href="{% url 'inventory:inventory_category_list' gym_id %}" class="btn btn-outline-success">
+                        <i class="fas fa-times me-2"></i>Clear Search
+                    </a>
+                {% else %}
+                    <p class="text-muted">Start by creating your first inventory category</p>
+                    <a href="{% url 'inventory:add_inventory_category' gym_id %}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Add First Category
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stats Card -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-boxes fa-2x mb-2"></i>
+                <h4>{{ total_categories }}</h4>
+                <p class="mb-0">Total Categories</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-box fa-2x mb-2"></i>
+                <h4>
+                    {% widthratio categories|length 1 1 %}
+                </h4>
+                <p class="mb-0">Categories Shown</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar fa-2x mb-2"></i>
+                <h4>{{ categories.paginator.num_pages|default:1 }}</h4>
+                <p class="mb-0">Total Pages</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

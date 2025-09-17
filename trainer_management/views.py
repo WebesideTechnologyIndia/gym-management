@@ -42,7 +42,7 @@ def trainer_list(request, gym_id):
             gym_admin = GymAdmin.objects.get(user=request.user)
             if gym not in gym_admin.gyms.all():
                 messages.error(request, "You do not have access to this gym!")
-                return redirect("gymadmin_home")
+                return redirect("multiple_gym:gymadmin_home")
         except GymAdmin.DoesNotExist:
             messages.error(request, "Access denied!")
             return redirect("login")
@@ -209,6 +209,135 @@ def add_trainer(request, gym_id):
     }
 
     return render(request, 'trainer_management/add_trainer.html', context)
+
+@login_required
+def edit_trainer(request, gym_id, trainer_id):
+    """Edit existing trainer - using same template as add_trainer"""
+    if request.user.user_type not in ["superadmin", "gymadmin"]:
+        messages.error(request, "Access denied!")
+        return redirect("login")
+
+    gym = get_object_or_404(Gym, id=gym_id)
+    trainer = get_object_or_404(Trainer, id=trainer_id, gym=gym)
+
+    # Check access permissions
+    if request.user.user_type == "gymadmin":
+        try:
+            gym_admin = GymAdmin.objects.get(user=request.user)
+            if gym not in gym_admin.gyms.all():
+                messages.error(request, "You do not have access to this gym!")
+                return redirect("gymadmin_home")
+        except GymAdmin.DoesNotExist:
+            messages.error(request, "Access denied!")
+            return redirect("login")
+
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Update user information
+                user = trainer.user
+                username = request.POST.get('username')
+                email = request.POST.get('email')
+                
+                # Check if username already exists (excluding current user)
+                if User.objects.filter(username=username).exclude(id=user.id).exists():
+                    messages.error(request, f"Username '{username}' already exists!")
+                    return render(request, 'trainer_management/add_trainer.html', {
+                        'gym': gym,
+                        'gym_id': gym_id,
+                        'trainer': trainer,
+                        'edit_mode': True,
+                    })
+                
+                # Check if email already exists (excluding current user)
+                if User.objects.filter(email=email).exclude(id=user.id).exists():
+                    messages.error(request, f"Email '{email}' already exists!")
+                    return render(request, 'trainer_management/add_trainer.html', {
+                        'gym': gym,
+                        'gym_id': gym_id,
+                        'trainer': trainer,
+                        'edit_mode': True,
+                    })
+
+                # Update user fields
+                user.username = username
+                user.email = email
+                user.first_name = request.POST.get('first_name')
+                user.last_name = request.POST.get('last_name')
+                
+                # Update password if provided
+                password = request.POST.get('password')
+                if password:
+                    user.set_password(password)
+                
+                user.save()
+
+                # Update trainer profile
+                trainer.phone = request.POST.get('phone')
+                trainer.alternate_phone = request.POST.get('alternate_phone', '')
+                trainer.date_of_birth = request.POST.get('date_of_birth') if request.POST.get('date_of_birth') else None
+                trainer.gender = request.POST.get('gender', '')
+                trainer.address_line1 = request.POST.get('address_line1', '')
+                trainer.address_line2 = request.POST.get('address_line2', '')
+                trainer.city = request.POST.get('city', '')
+                trainer.state = request.POST.get('state', '')
+                trainer.pin_code = request.POST.get('pin_code', '')
+                trainer.specialization = request.POST.get('specialization', '')
+                trainer.certifications = request.POST.get('certifications', '')
+                trainer.experience_years = int(request.POST.get('experience_years', 0))
+                trainer.bio = request.POST.get('bio', '')
+                trainer.salary_type = request.POST.get('salary_type', 'fixed')
+                trainer.salary_amount = Decimal(str(request.POST.get('salary_amount', 0)))
+                trainer.hire_date = request.POST.get('hire_date') if request.POST.get('hire_date') else trainer.hire_date
+
+                # Handle photo upload
+                if 'photo' in request.FILES:
+                    trainer.photo = request.FILES['photo']
+
+                trainer.save()
+
+                # Update permissions
+                permissions, created = TrainerPermission.objects.get_or_create(trainer=trainer)
+                permissions.can_create_members = request.POST.get('can_create_members') == 'on'
+                permissions.can_edit_members = request.POST.get('can_edit_members') == 'on'
+                permissions.can_view_all_members = request.POST.get('can_view_all_members') == 'on'
+                permissions.can_create_sessions = request.POST.get('can_create_sessions') == 'on'
+                permissions.can_edit_sessions = request.POST.get('can_edit_sessions') == 'on'
+                permissions.can_delete_sessions = request.POST.get('can_delete_sessions') == 'on'
+                permissions.can_upload_content = request.POST.get('can_upload_content') == 'on'
+                permissions.can_manage_assignments = request.POST.get('can_manage_assignments') == 'on'
+                permissions.can_view_reports = request.POST.get('can_view_reports') == 'on'
+                permissions.can_view_payments = request.POST.get('can_view_payments') == 'on'
+                permissions.save()
+
+                print(f"✅ Updated trainer: {trainer.user.get_full_name()}")
+
+                success_msg = f'Trainer "{trainer.user.get_full_name()}" updated successfully!'
+                messages.success(request, success_msg)
+                return redirect('trainer_management:trainer_detail', gym_id=gym_id, trainer_id=trainer.id)
+
+        except Exception as e:
+            print(f"❌ Error updating trainer: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            messages.error(request, f"Error updating trainer: {str(e)}")
+
+    # Get trainer permissions for display
+    try:
+        permissions = trainer.permissions
+    except TrainerPermission.DoesNotExist:
+        permissions = None
+
+    context = {
+        'gym': gym,
+        'gym_id': gym_id,
+        'trainer': trainer,
+        'permissions': permissions,
+        'edit_mode': True,  # This flag tells template we're in edit mode
+    }
+
+    return render(request, 'trainer_management/add_trainer.html', context)
+
 
 @login_required
 def trainer_detail(request, gym_id, trainer_id):
@@ -774,6 +903,7 @@ def add_participant(request, session_id):
             messages.error(request, 'Please select a member.')
     
     return redirect('trainer_management:session_detail', session_id=session_id)
+
 
 @login_required
 def session_detail(request, session_id):

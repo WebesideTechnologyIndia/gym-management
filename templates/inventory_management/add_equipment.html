@@ -1,18 +1,38 @@
 {% extends 'multiple_gym/base.html' %}
 {% load static %}
 
-{% block title %}Add Equipment - {{ gym.name }}{% endblock %}
+{% block title %}
+    {% if is_edit_mode %}Edit Equipment - {{ gym.name }}{% else %}Add Equipment - {{ gym.name }}{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2><i class="fas fa-plus me-2"></i>Add New Equipment</h2>
-        <p class="text-muted mb-0">Add equipment to {{ gym.name }}</p>
+        <h2>
+            <i class="fas fa-{% if is_edit_mode %}edit{% else %}plus{% endif %} me-2"></i>
+            {% if is_edit_mode %}Edit Equipment{% else %}Add New Equipment{% endif %}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if is_edit_mode %}
+                Update equipment information for {{ gym.name }}
+            {% else %}
+                Add equipment to {{ gym.name }}
+            {% endif %}
+        </p>
     </div>
     <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left me-2"></i>Back to Equipment List
     </a>
 </div>
+
+<!-- Success/Error Alert -->
+{% if is_edit_mode %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>Edit Mode:</strong> You are editing "{{ equipment.name }}" - Serial: {{ equipment.serial_number }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
 
 <div class="row">
     <div class="col-lg-8">
@@ -33,32 +53,63 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Equipment Name *</label>
-                            <input type="text" name="name" class="form-control" placeholder="e.g., Treadmill Pro X1" required>
+                            <input type="text" name="name" class="form-control" 
+                                   placeholder="e.g., Treadmill Pro X1" 
+                                   value="{{ form.name.value|default:'' }}" required>
+                            {% if form.name.errors %}
+                                <div class="text-danger">{{ form.name.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Category *</label>
                             <select name="category" class="form-select" required>
                                 <option value="">Select Category</option>
                                 {% for category in categories %}
-                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                <option value="{{ category.id }}" 
+                                        {% if form.category.value == category.id or equipment.category.id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
                                 {% endfor %}
                             </select>
+                            {% if form.category.errors %}
+                                <div class="text-danger">{{ form.category.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Brand *</label>
-                            <input type="text" name="brand" class="form-control" placeholder="e.g., Life Fitness" required>
+                            <input type="text" name="brand" class="form-control" 
+                                   placeholder="e.g., Life Fitness" 
+                                   value="{{ form.brand.value|default:'' }}" required>
+                            {% if form.brand.errors %}
+                                <div class="text-danger">{{ form.brand.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Model Number</label>
-                            <input type="text" name="model_number" class="form-control" placeholder="e.g., T3-5">
+                            <input type="text" name="model_number" class="form-control" 
+                                   placeholder="e.g., T3-5"
+                                   value="{{ form.model_number.value|default:'' }}">
+                            {% if form.model_number.errors %}
+                                <div class="text-danger">{{ form.model_number.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Serial Number *</label>
-                            <input type="text" name="serial_number" class="form-control" placeholder="e.g., LF2023001" required>
+                            <input type="text" name="serial_number" class="form-control" 
+                                   placeholder="e.g., LF2023001" 
+                                   value="{{ form.serial_number.value|default:'' }}" required>
+                            {% if form.serial_number.errors %}
+                                <div class="text-danger">{{ form.serial_number.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Location</label>
-                            <input type="text" name="location" class="form-control" placeholder="e.g., Cardio Section - Zone A">
+                            <input type="text" name="location" class="form-control" 
+                                   placeholder="e.g., Cardio Section - Zone A"
+                                   value="{{ form.location.value|default:'' }}">
+                            {% if form.location.errors %}
+                                <div class="text-danger">{{ form.location.errors.0 }}</div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -69,75 +120,144 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Purchase Date *</label>
-                            <input type="date" name="purchase_date" class="form-control" required>
+                            <input type="date" name="purchase_date" class="form-control" 
+                                   value="{{ form.purchase_date.value|default:'' }}" required>
+                            {% if form.purchase_date.errors %}
+                                <div class="text-danger">{{ form.purchase_date.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Purchase Price (₹) *</label>
-                            <input type="number" name="purchase_price" class="form-control" step="0.01" min="0" placeholder="e.g., 250000" required>
+                            <input type="number" name="purchase_price" class="form-control" 
+                                   step="0.01" min="0" placeholder="e.g., 250000" 
+                                   value="{{ form.purchase_price.value|default:'' }}" required>
+                            {% if form.purchase_price.errors %}
+                                <div class="text-danger">{{ form.purchase_price.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Vendor</label>
                             <select name="vendor" class="form-select">
                                 <option value="">Select Vendor</option>
                                 {% for vendor in vendors %}
-                                <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                <option value="{{ vendor.id }}" 
+                                        {% if form.vendor.value == vendor.id or equipment.vendor.id == vendor.id %}selected{% endif %}>
+                                    {{ vendor.name }}
+                                </option>
                                 {% endfor %}
                             </select>
+                            {% if form.vendor.errors %}
+                                <div class="text-danger">{{ form.vendor.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Invoice Number</label>
-                            <input type="text" name="invoice_number" class="form-control" placeholder="e.g., INV-2023-001">
+                            <input type="text" name="invoice_number" class="form-control" 
+                                   placeholder="e.g., INV-2023-001"
+                                   value="{{ form.invoice_number.value|default:'' }}">
+                            {% if form.invoice_number.errors %}
+                                <div class="text-danger">{{ form.invoice_number.errors.0 }}</div>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Purchase Information के बाद यह add करो -->
-<div class="row mb-4">
-    <div class="col-12">
-        <h6 class="text-primary mb-3">Status & Condition</h6>
-    </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Status *</label>
-        <select name="status" class="form-select" required>
-            <option value="">Select Status</option>
-            <option value="working" selected>Working</option>
-            <option value="maintenance">Under Maintenance</option>
-            <option value="repair">Under Repair</option>
-            <option value="out_of_order">Out of Order</option>
-            <option value="disposed">Disposed</option>
-        </select>
-    </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Condition *</label>
-        <select name="condition" class="form-select" required>
-            <option value="">Select Condition</option>
-            <option value="excellent" selected>Excellent</option>
-            <option value="good">Good</option>
-            <option value="fair">Fair</option>
-            <option value="poor">Poor</option>
-            <option value="critical">Critical</option>
-        </select>
-    </div>
-</div>
+                    <!-- Status & Condition -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Status & Condition</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status *</label>
+                            <select name="status" class="form-select" required>
+                                <option value="">Select Status</option>
+                                <option value="working" 
+                                        {% if form.status.value == 'working' or equipment.status == 'working' or not equipment %}selected{% endif %}>
+                                    Working
+                                </option>
+                                <option value="maintenance" 
+                                        {% if form.status.value == 'maintenance' or equipment.status == 'maintenance' %}selected{% endif %}>
+                                    Under Maintenance
+                                </option>
+                                <option value="repair" 
+                                        {% if form.status.value == 'repair' or equipment.status == 'repair' %}selected{% endif %}>
+                                    Under Repair
+                                </option>
+                                <option value="out_of_order" 
+                                        {% if form.status.value == 'out_of_order' or equipment.status == 'out_of_order' %}selected{% endif %}>
+                                    Out of Order
+                                </option>
+                                <option value="disposed" 
+                                        {% if form.status.value == 'disposed' or equipment.status == 'disposed' %}selected{% endif %}>
+                                    Disposed
+                                </option>
+                            </select>
+                            {% if form.status.errors %}
+                                <div class="text-danger">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Condition *</label>
+                            <select name="condition" class="form-select" required>
+                                <option value="">Select Condition</option>
+                                <option value="excellent" 
+                                        {% if form.condition.value == 'excellent' or equipment.condition == 'excellent' or not equipment %}selected{% endif %}>
+                                    Excellent
+                                </option>
+                                <option value="good" 
+                                        {% if form.condition.value == 'good' or equipment.condition == 'good' %}selected{% endif %}>
+                                    Good
+                                </option>
+                                <option value="fair" 
+                                        {% if form.condition.value == 'fair' or equipment.condition == 'fair' %}selected{% endif %}>
+                                    Fair
+                                </option>
+                                <option value="poor" 
+                                        {% if form.condition.value == 'poor' or equipment.condition == 'poor' %}selected{% endif %}>
+                                    Poor
+                                </option>
+                                <option value="critical" 
+                                        {% if form.condition.value == 'critical' or equipment.condition == 'critical' %}selected{% endif %}>
+                                    Critical
+                                </option>
+                            </select>
+                            {% if form.condition.errors %}
+                                <div class="text-danger">{{ form.condition.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
 
                     <!-- Warranty Information -->
                     <div class="row mb-4">
-    <div class="col-12">
-        <h6 class="text-primary mb-3">Warranty Information</h6>
-    </div>
-    <div class="col-md-4 mb-3">
-        <label class="form-label">Warranty Start Date *</label>
-        <input type="date" name="warranty_start_date" class="form-control" required>
-    </div>
-    <div class="col-md-4 mb-3">
-        <label class="form-label">Warranty Period (Months) *</label>
-        <input type="number" name="warranty_period_months" class="form-control" min="1" max="120" value="12" required>
-    </div>
-    <div class="col-md-4 mb-3">
-        <label class="form-label">Warranty End Date *</label>
-        <input type="date" name="warranty_end_date" class="form-control" required>
-        <div class="form-text">Auto-calculated or manually entered</div>
-    </div>
-</div>
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">Warranty Information</h6>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Warranty Start Date *</label>
+                            <input type="date" name="warranty_start_date" class="form-control" 
+                                   value="{{ form.warranty_start_date.value|default:'' }}" required>
+                            {% if form.warranty_start_date.errors %}
+                                <div class="text-danger">{{ form.warranty_start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Warranty Period (Months) *</label>
+                            <input type="number" name="warranty_period_months" class="form-control" 
+                                   min="1" max="120" 
+                                   value="{{ form.warranty_period_months.value|default:'12' }}" required>
+                            {% if form.warranty_period_months.errors %}
+                                <div class="text-danger">{{ form.warranty_period_months.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Warranty End Date *</label>
+                            <input type="date" name="warranty_end_date" class="form-control" 
+                                   value="{{ form.warranty_end_date.value|default:'' }}" required>
+                            <div class="form-text">Auto-calculated or manually entered</div>
+                            {% if form.warranty_end_date.errors %}
+                                <div class="text-danger">{{ form.warranty_end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
 
                     <!-- Additional Information -->
                     <div class="row mb-4">
@@ -146,11 +266,19 @@
                         </div>
                         <div class="col-12 mb-3">
                             <label class="form-label">Technical Specifications</label>
-                            <textarea name="specifications" class="form-control" rows="3" placeholder="Enter technical specifications, dimensions, power requirements, etc."></textarea>
+                            <textarea name="specifications" class="form-control" rows="3" 
+                                      placeholder="Enter technical specifications, dimensions, power requirements, etc.">{{ form.specifications.value|default:'' }}</textarea>
+                            {% if form.specifications.errors %}
+                                <div class="text-danger">{{ form.specifications.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-12 mb-3">
                             <label class="form-label">Notes</label>
-                            <textarea name="notes" class="form-control" rows="2" placeholder="Any additional notes or remarks"></textarea>
+                            <textarea name="notes" class="form-control" rows="2" 
+                                      placeholder="Any additional notes or remarks">{{ form.notes.value|default:'' }}</textarea>
+                            {% if form.notes.errors %}
+                                <div class="text-danger">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -159,7 +287,8 @@
                             <i class="fas fa-times me-2"></i>Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Add Equipment
+                            <i class="fas fa-save me-2"></i>
+                            {% if is_edit_mode %}Update Equipment{% else %}Add Equipment{% endif %}
                         </button>
                     </div>
                 </form>
@@ -196,6 +325,15 @@
                         Keep track of warranty periods. The system will alert you when warranties are about to expire.
                     </small>
                 </div>
+
+                {% if is_edit_mode %}
+                <div class="mb-3">
+                    <h6><i class="fas fa-lightbulb text-info me-2"></i>Edit Mode</h6>
+                    <small class="text-muted">
+                        You can update any equipment information. Changes will be saved immediately upon form submission.
+                    </small>
+                </div>
+                {% endif %}
             </div>
         </div>
         
@@ -208,18 +346,51 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    {% if not is_edit_mode %}
                     <a href="{% url 'inventory:vendor_create' gym_id %}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-plus me-2"></i>Add New Vendor
+                        <i class="fas fa-plus me-2"></i>Add New Vendor
                     </a>
+                    {% endif %}
                     <a href="{% url 'inventory:equipment_list' gym_id %}" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-list me-2"></i>View All Equipment
                     </a>
+                    {% if is_edit_mode %}
+                    <a href="{% url 'inventory:equipment_detail' gym_id equipment.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-eye me-2"></i>View Equipment Details
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Equipment Details (if editing) -->
+        {% if is_edit_mode and equipment %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info me-2"></i>Current Equipment Info
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">Created:</small>
+                    <div class="fw-bold">{{ equipment.created_at|date:"M d, Y" }}</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Last Updated:</small>
+                    <div class="fw-bold">{{ equipment.updated_at|date:"M d, Y H:i" }}</div>
+                </div>
+                {% if equipment.created_by %}
+                <div class="mb-2">
+                    <small class="text-muted">Added By:</small>
+                    <div class="fw-bold">{{ equipment.created_by.get_full_name|default:equipment.created_by.username }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
-
 
 <script>
 // Auto-calculate warranty end date
@@ -256,6 +427,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             warrantyEndInput.value = `${year}-${month}-${day}`;
         }
+    }
+
+    // Auto-calculate on page load if values exist
+    if (warrantyStartInput.value && warrantyPeriodInput.value) {
+        calculateWarrantyEndDate();
     }
 });
 </script>

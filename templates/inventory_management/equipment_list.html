@@ -145,13 +145,16 @@
                                     <li><a class="dropdown-item" href="{% url 'inventory:equipment_detail' gym_id equipment.id %}">
                                             <i class="fas fa-eye me-2"></i>View Details
                                         </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:edit_equipment' gym_id equipment.id %}">
+                                            <i class="fas fa-edit me-2"></i>Edit Equipment
+                                        </a></li>
                                     <li><a class="dropdown-item" href="#">
                                             <i class="fas fa-tools me-2"></i>Schedule Maintenance
                                         </a></li>
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
-                                    <li><a class="dropdown-item text-danger" href="#">
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="confirmDelete('{{ equipment.id }}', '{{ equipment.name }}')">
                                             <i class="fas fa-trash me-2"></i>Delete
                                         </a></li>
                                 </ul>
@@ -201,10 +204,13 @@
                     <div class="card-footer bg-transparent">
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="{% url 'inventory:equipment_detail' gym_id equipment.id %}"
-                                class="btn btn-info me-2">
-                                <i class="fas fa-dumbbell me-2"></i>View Equipment
+                                class="btn btn-info btn-sm me-2">
+                                <i class="fas fa-eye me-1"></i>View
                             </a>
-                            <a href="#" class="btn btn-primary btn-sm">
+                            <a href="{% url 'inventory:edit_equipment' gym_id equipment.id %}" class="btn btn-primary btn-sm me-2">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <a href="#" class="btn btn-warning btn-sm">
                                 <i class="fas fa-tools me-1"></i>Maintain
                             </a>
                         </div>
@@ -266,9 +272,15 @@
                                 <a href="{% url 'inventory:equipment_detail' gym_id equipment.id %}" class="btn btn-outline-primary" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <a href="{% url 'inventory:edit_equipment' gym_id equipment.id %}" class="btn btn-outline-success" title="Edit Equipment">
+                                    <i class="fas fa-edit"></i>
+                                </a>
                                 <a href="#" class="btn btn-outline-warning" title="Schedule Maintenance">
                                     <i class="fas fa-tools"></i>
                                 </a>
+                                <button class="btn btn-outline-danger" title="Delete Equipment" onclick="confirmDelete('{{ equipment.id }}', '{{ equipment.name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -286,6 +298,34 @@
             </a>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Are you sure you want to delete <strong id="equipment-name-to-delete"></strong>?
+                </div>
+                <p class="text-muted">This action cannot be undone. All related maintenance records will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="delete-form" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Equipment
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -310,6 +350,15 @@
             }
         });
     });
+
+    // Delete confirmation function
+    function confirmDelete(equipmentId, equipmentName) {
+        document.getElementById('equipment-name-to-delete').textContent = equipmentName;
+        document.getElementById('delete-form').action = `{% url 'inventory:delete_equipment' gym_id 0 %}`.replace('0', equipmentId);
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
 </script>
 
 <style>

@@ -1,0 +1,117 @@
+{% extends 'multiple_gym/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Edit Membership</h2>
+        <a href="{% if gym_id %}{% url 'multiple_gym:membership_list_gym' gym_id %}{% else %}{% url 'multiple_gym:membership_list' %}{% endif %}" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Edit Membership Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="member_name" class="form-label">Member Name *</label>
+                            <input type="text" class="form-control" id="member_name" name="member_name" 
+                                   value="{{ membership.member_name }}" required>
+                            <small class="text-muted">Current member: {{ membership.member_name.user.username }}</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="plan" class="form-label">Membership Plan *</label>
+                            <select class="form-select" id="plan" name="plan" required>
+                                <option value="">Select a plan</option>
+                                {% for plan in plans %}
+                                <option value="{{ plan.id }}" 
+                                        data-price="{{ plan.price }}" 
+                                        data-duration="{{ plan.duration_months }}"
+                                        {% if plan.id == membership.plan.id %}selected{% endif %}>
+                                    {{ plan.name }} - ₹{{ plan.price }} ({{ plan.duration_months }} months)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date *</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ membership.start_date|date:'Y-m-d' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="membership_status" class="form-label">Membership Status</label>
+                            <select class="form-select" id="membership_status" name="membership_status">
+                                <option value="active" {% if membership.membership_status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="inactive" {% if membership.membership_status == 'inactive' %}selected{% endif %}>Inactive</option>
+                                <option value="suspended" {% if membership.membership_status == 'suspended' %}selected{% endif %}>Suspended</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="payment_status" class="form-label">Payment Status</label>
+                            <select class="form-select" id="payment_status" name="payment_status">
+                                <option value="paid" {% if membership.payment_status == 'paid' %}selected{% endif %}>Paid</option>
+                                <option value="partial" {% if membership.payment_status == 'partial' %}selected{% endif %}>Partial</option>
+                                <option value="unpaid" {% if membership.payment_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Current End Date</label>
+                                    <input type="text" class="form-control" 
+                                           value="{{ membership.end_date|date:'Y-m-d' }}" readonly>
+                                    <small class="text-muted">End date will be recalculated based on start date and plan</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Plan Price</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₹</span>
+                                        <input type="text" class="form-control" id="plan_price" 
+                                               value="{{ membership.plan.price }}" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% if gym_id %}{% url 'multiple_gym:membership_list_gym' gym_id %}{% else %}{% url 'multiple_gym:membership_list' %}{% endif %}" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Update Membership</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update price when plan is changed
+document.getElementById('plan').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const price = selectedOption.getAttribute('data-price');
+    document.getElementById('plan_price').value = price || '';
+});
+</script>
+{% endblock %}

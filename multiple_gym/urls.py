@@ -10,7 +10,7 @@ urlpatterns = [
     
     # Authentication
     path("login/", views.login_view, name="login"),
-    path("logout/", views.logout_view, name="logout"),  # Added logout URL
+    path("logout/", views.logout_view, name="logout"),
     
     # Super Admin URLs
     path("superadmin/", views.superadmin_dashboard, name="superadmin_dashboard"),
@@ -29,7 +29,11 @@ urlpatterns = [
     path("membership_list/", views.membership_list, name="membership_list"),
     path("membership_list/<int:gym_id>/", views.membership_list, name="membership_list_gym"),
     
+    # Membership CRUD URLs
     path("detail/<int:pk>/", views.membership_detail, name="membership_detail"),
+    path("edit/<int:pk>/", views.edit_membership, name="edit_membership"),  # ADD THIS LINE
+    path("delete/<int:pk>/", views.delete_membership, name="delete_membership"),  # ADD THIS LINE
+    
     path("gymadmin/", views.gymadmin_home, name="gymadmin_home"),
     
     # Membership Plan URLs

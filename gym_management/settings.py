@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-mic$pcj(t8bc5+wirw4c&nrb4ep)f!$&&@rj@1y%w@ihc!rvy&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = 'multiple_gym.User'
 # Application definition
